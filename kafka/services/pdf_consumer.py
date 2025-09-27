@@ -16,7 +16,7 @@ from confluent_kafka import Consumer, KafkaError
 
 import os
 from google import genai
-from google.cloud import texttospeech
+from google.cloud import texttospeech, storage
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -103,11 +103,34 @@ class TikTalkKafkaConsumer:
             response = client.synthesize_speech(
                 input=synthesis_input, voice=voice, audio_config=audio_config
             )
-            # the respons's audio_content is binary
-            with open("output.mp3", "wb") as out:
-                # Write the response to the output file.
+            # the response's audio_content is binary
+            with open("audio.mp3", "wb") as out:
+                # write the response to the output file.
                 out.write(response.audio_content)
-                print('Audio content written to file "output.mp3"')
+                print('Audio content written to file "audio.mp3"')
+
+    # (3) upload the object into the bucket
+    def upload_blob(self, bucket_name, source_file_name, destination_blob_name):
+        """Uploads a file to the bucket."""
+        # The ID of your GCS bucket
+        # bucket_name = "your-bucket-name"
+        # The path to your file to upload
+        # source_file_name = "local/path/to/file"
+        # The ID of your GCS object
+        # destination_blob_name = "storage-object-name"
+
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+
+        generation_match_precondition = 0
+
+        # upload to storage bucket
+        blob.upload_from_filename(source_file_name, if_generation_match=generation_match_precondition)
+
+        print(
+            f"File {source_file_name} uploaded to {destination_blob_name}."
+        )
 
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
@@ -134,15 +157,17 @@ class TikTalkKafkaConsumer:
 
             # TODO, use google Gemini API to generate lecture scripts
             script = self.script(full_text)
+            logger.info("--- GENERATED TIKTOK SCRIPT ---")
+            logger.info(script)
 
             # TODO, use text to speech to generate audio files and upload to google cloud bucket
             audio = self.audio(script)
 
-            logger.info("--- GENERATED TIKTOK SCRIPT ---")
-            logger.info(script)
-
-            # with open("output.txt", "w", encoding="utf-8") as f:
-            #     f.write(script)
+            # TODO, upload mp3 file to google cloud storage bucket
+            bucket_name = "tiktalk-bucket"
+            source_file_name="audio.mp3"
+            destination_blob_name = "outputs/audio.mp3"
+            self.upload_blob(bucket_name, source_file_name,destination_blob_name)
 
             return True
 
