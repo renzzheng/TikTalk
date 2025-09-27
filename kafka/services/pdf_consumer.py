@@ -60,23 +60,31 @@ class TikTalkKafkaConsumer:
         self.consumer.subscribe(self.topics)
         logger.info(f"Subscribed to topics: {self.topics}")
 
-    # (1) create script using google cloud genai
     def script(self, text: str) -> str:
-        # Get API key
+        # get API key
         api_key = os.environ.get("GEMINI_API_KEY")
         print(api_key)
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
 
-        # Create the GenAI client with API key
+        # create the GenAI client with API key
         client = genai.Client(api_key=api_key)
-        print("GenAI client created:", client)
 
         prompt = (
-            f"Based on this text: {text}, can you give me a small script for a short 30 second TikTok video?Return to me only the plain transcript, with only the narration to the video, and do not include any sound cues. I need you to personally shut up and not say anything. As for the content of the script, can you use the text to explain concisely, but with some level of depth so that it is not too brief, on the topics in the text that is being read? It should be detailed enough to teach the viewer information that is not simply superficial level knowledge. Give it a nice hook and ending transition that would be fit for a TikTok style video. Do not ask the watcher to subscribe, like, comment, or anything like that at the end."
+            f"Based on this text: {text}\n"
+            "Write a concise TikTok narration script split into paragraphs. "
+            "Each paragraph should correspond to a separate topic"
+            "Create ten or fewer topics — fewer is better — based on the information given. "
+            "Each topic should be approximately a 20-second narration. "
+            "Return only the plain transcript text — no sound cues or extra commentary. "
+            "Use the text to clearly explain the topic with depth, not just surface-level facts, so the viewer learns something new. "
+            "Start with a strong hook, and finish with a smooth transition that connects naturally to the next subtopic. "
+            "The tone should be engaging and easy to follow, suited for TikTok. "
+            "Ensure each script paragraph feels slightly connected to the others for a seamless video series."
         )
+
         response = client.models.generate_content(
-            model="gemini-2.5-flash", # is this the correct model?
+            model="gemini-2.5-flash",
             contents=prompt
         )
 
@@ -136,42 +144,48 @@ class TikTalkKafkaConsumer:
             f"File {source_file_name} uploaded to {destination_blob_name}."
         )
 
+
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
-            pdf_url = message_data.get("pdf_url")
-            if not pdf_url:
-                logger.error("No pdf_url in message")
+            all_text = ""
+            pdf_urls = message_data.get("pdf_urls")
+            if not pdf_urls or not isinstance(pdf_urls, list):
+                logger.error("No pdf_urls in message")
                 return False
 
-            logger.info("=" * 50)
-            logger.info(f"Processing PDF: {pdf_url}")
+            for pdf_url in pdf_urls:
+                logger.info("=" * 50)
+                logger.info(f"Processing PDF: {pdf_url}")
 
-            # Download PDF
-            response = requests.get(pdf_url)
-            if response.status_code != 200:
-                logger.error(f"Failed to download PDF: {response.status_code}")
-                return False
+                # Download PDF
+                response = requests.get(pdf_url)
+                if response.status_code != 200:
+                    logger.error(f"Failed to download PDF: {response.status_code}")
+                    continue
 
-            pdf_bytes = io.BytesIO(response.content)
-            full_text = extract_text_from_pdf(pdf_bytes)
+                pdf_bytes = io.BytesIO(response.content)
+                full_text = extract_text_from_pdf(pdf_bytes)
+                all_text = all_text + full_text
+            logger.info("All scripts loaded")
+        
+            # Generate TikTok script
+            script = self.script(all_text)
 
-            logger.info("--- LECTURE PREVIEW (first 1000 chars) ---")
-            logger.info(full_text[:1000])
-            logger.info("=" * 50)
+            print(script)
 
-            # TODO, use google Gemini API to generate lecture scripts
-            script = self.script(full_text)
-            logger.info("--- GENERATED TIKTOK SCRIPT ---")
-            logger.info(script)
+            # Split script by paragraphs
+            paragraphs = [p.strip() for p in script.split("\n") if p.strip()]
 
-            # TODO, use text to speech to generate audio files and upload to google cloud bucket
-            audio_file_name = self.audio(script, "_audio.mp3")
+            # Loop through paragraphs and generate audio
+            for i, para in enumerate(paragraphs, start=1):
+                output_filename = f"output_{i}.mp3"
+                self.audio(para, output_filename=output_filename)
+                print(f"Audio generated: {output_filename}")
 
-            # TODO, upload mp3 file to google cloud storage bucket
-            bucket_name = "tiktalk-bucket"
-            source_file_name=audio_file_name
-            destination_blob_name = "outputs/audio.mp3"
-            self.upload_blob(bucket_name, source_file_name, destination_blob_name)
+            # logger.info("--- GENERATED TIKTOK SCRIPT ---")
+            # logger.info(script)
+
+            
 
             return True
 
