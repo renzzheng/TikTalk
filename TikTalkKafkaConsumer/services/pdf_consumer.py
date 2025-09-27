@@ -19,6 +19,10 @@ import os
 from google import genai
 from google.cloud import texttospeech
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
@@ -66,8 +70,16 @@ class TikTalkKafkaConsumer:
 
     # (1) create script using google cloud genai
     def script(self, text: str) -> str:
-        client = genai.Client() # replace with real key ?
-        print(client)
+        # Get API key
+        api_key = os.environ.get("GEMINI_API_KEY")
+        print(api_key)
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables")
+
+        # Create the GenAI client with API key
+        client = genai.Client(api_key=api_key)
+        print("GenAI client created:", client)
+
         prompt = (
             f"Based on this text: {text}, can you give me a small script for a short 30 second TikTok video?Return to me only the plain transcript, with only the narration to the video, and do not include any sound cues. I need you to personally shut up and not say anything. As for the content of the script, can you use the text to explain concisely, but with some level of depth so that it is not too brief, on the topics in the text that is being read? It should be detailed enough to teach the viewer information that is not simply superficial level knowledge. Give it a nice hook and ending transition that would be fit for a TikTok style video. Do not ask the watcher to subscribe, like, comment, or anything like that at the end."
         )
