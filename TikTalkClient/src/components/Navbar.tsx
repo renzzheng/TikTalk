@@ -35,7 +35,7 @@ export function Navbar() {
                         <NavigationMenu.Item>
                             <NavigationMenu.Link asChild>
                                 <Link
-                                    href="/upload"
+                                    href="/create"
                                     className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
                                 >
                                     Upload
