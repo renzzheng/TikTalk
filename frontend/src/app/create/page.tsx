@@ -12,9 +12,30 @@ export default function Upload() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (res.ok) {
+            console.log(`${file.name} uploaded successfully!`);
+          } else {
+            console.error(`Failed to upload ${file.name}`);
+          }
+        } catch (err) {
+          console.error(`Error uploading ${file.name}:`, err);
+        }
+      }
     }
   };
 

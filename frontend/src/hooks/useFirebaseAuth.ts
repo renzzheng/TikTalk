@@ -19,4 +19,6 @@ export function useFirebaseAuth(): Auth | null {
   }, []);
 
   return auth;
+
 }
+
