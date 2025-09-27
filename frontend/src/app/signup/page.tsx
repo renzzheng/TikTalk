@@ -3,9 +3,11 @@ import React, { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useFirebaseAuth } from "../../hooks/useFirebaseAuth";
 import { FirebaseError } from "firebase/app";
+import { useRouter } from "next/navigation"; // ✅ import router
 
 export default function SignUp() {
   const auth = useFirebaseAuth();
+  const router = useRouter(); // ✅ initialize router
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,24 +43,45 @@ export default function SignUp() {
     }
 
     setError("");
-    // Do shit
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       const token = await user.getIdToken();
 
-      console.log("✅ User created:", user.uid);
-      console.log("🔑 Token:", token);
+      console.log("User created:", user.uid);
+      console.log("Token:", token);
 
-      // ...
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/register`;
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: (document.getElementById("full_name") as HTMLInputElement).value,
+          username: (document.getElementById("username") as HTMLInputElement).value,
+          email,
+        }),
+      });
+
+      const json = await res.json();
+      console.log("API response:", json);
+
+      if (res.ok) {
+        router.push("/");
+      } else {
+        setError(json.error || "Failed to register user");
+      }
     } catch (err) {
       if (err instanceof FirebaseError) {
+        console.error(err);
         setError(err.message);
       } else {
+        console.error(err);
         setError("Unexpected error occurred.");
       }
     }
-
   };
 
   return (
@@ -69,12 +92,12 @@ export default function SignUp() {
         </h1>
         <form onSubmit={handleSignUp} className="space-y-4">
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
               Full Name
             </label>
             <input
               type="text"
-              id="fullName"
+              id="full_name"
               className="text-black mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md 
                          shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               required

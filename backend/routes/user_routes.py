@@ -25,6 +25,7 @@ def register_user():
     """
     try:
         data = request.get_json()
+        print(data)
         current_user = get_current_user()
         firebase_uid = current_user['uid']
         
