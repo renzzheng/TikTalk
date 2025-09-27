@@ -15,8 +15,9 @@ import pytesseract
 from confluent_kafka import Consumer, KafkaError
 
 import os
-from google.cloud import texttospeech, generativelanguage
+
 from google import genai
+from google.cloud import texttospeech
 
 # Logging setup
 logging.basicConfig(
@@ -43,23 +44,9 @@ def extract_text_from_pdf(pdf_bytes: io.BytesIO) -> str:
 
     return "\n".join(extracted_text)
 
-# (1) create script using google cloud genai
-def script():
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY")) # replace with real key
-
-        prompt = (
-            "Based on this text, can you give me a small script for a short 30 second TikTok video?Return to me only the plain transcript, with only the narration to the video, and do not include any sound cues. I need you to personally shut up and not say anything. As for the content of the script, can you use the text to explain concisely, but with some level of depth so that it is not too brief, on the topics in the text that is being read? It should be detailed enough to teach the viewer information that is not simply superficial level knowledge. Give it a nice hook and ending transition that would be fit for a TikTok style video. Do not ask the watcher to subscribe, like, comment, or anything like that at the end."
-        )
-        response = client.responses.create(
-            model="models/gemini-2.5-flash", # is this the correct model?
-            input=prompt
-        )
-
-        return jsonify(response.to_dict())
-
-# (2) use google cloud tts to create audio
-def audio():
-    tts_client = 
+# # (2) use google cloud tts to create audio
+# def audio():
+#     tts_client = 
 
 
 class TikTalkKafkaConsumer:
@@ -76,6 +63,22 @@ class TikTalkKafkaConsumer:
         self.topics = ["pdf-processing"]
         self.consumer.subscribe(self.topics)
         logger.info(f"Subscribed to topics: {self.topics}")
+
+    # (1) create script using google cloud genai
+    def script(self, text: str) -> str:
+        client = genai.Client() # replace with real key ?
+        print(client)
+        prompt = (
+            f"Based on this text: {text}, can you give me a small script for a short 30 second TikTok video?Return to me only the plain transcript, with only the narration to the video, and do not include any sound cues. I need you to personally shut up and not say anything. As for the content of the script, can you use the text to explain concisely, but with some level of depth so that it is not too brief, on the topics in the text that is being read? It should be detailed enough to teach the viewer information that is not simply superficial level knowledge. Give it a nice hook and ending transition that would be fit for a TikTok style video. Do not ask the watcher to subscribe, like, comment, or anything like that at the end."
+        )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", # is this the correct model?
+            contents=prompt
+        )
+        print(response)
+
+        return response.output_text 
+    
 
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
@@ -99,13 +102,21 @@ class TikTalkKafkaConsumer:
             logger.info("--- LECTURE PREVIEW (first 1000 chars) ---")
             logger.info(full_text[:1000])
             logger.info("=" * 50)
-            return True
 
             # TODO, use google Gemini API to generate lecture scripts
-            script()
+            script = self.script(full_text)
 
             # TODO, use text to speech to generate audio files and upload to google cloud bucket
-            audio()
+            # audio()
+
+            logger.info("--- GENERATED TIKTOK SCRIPT ---")
+            logger.info(script)
+
+            with open("output.text", "w", encoding="utf-8") as f:
+                f.write(script)
+            print(os.getcwd())
+            
+            return True
 
         except Exception as e:
             logger.error(f"Error processing PDF: {str(e)}")
