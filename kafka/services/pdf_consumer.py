@@ -28,7 +28,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 def extract_text_from_pdf(pdf_bytes: io.BytesIO) -> str:
     """Extract text using pdfplumber, fallback to pytesseract for images."""
     extracted_text = []
@@ -104,10 +103,12 @@ class TikTalkKafkaConsumer:
                 input=synthesis_input, voice=voice, audio_config=audio_config
             )
             # the response's audio_content is binary
-            with open("audio.mp3", "wb") as out:
+            with open(output_filename, "wb") as out:
                 # write the response to the output file.
                 out.write(response.audio_content)
-                print('Audio content written to file "audio.mp3"')
+                print(f'Audio content written to file {output_filename}')
+
+            return output_filename
 
     # (3) upload the object into the bucket
     def upload_blob(self, bucket_name, source_file_name, destination_blob_name):
@@ -123,7 +124,10 @@ class TikTalkKafkaConsumer:
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(destination_blob_name)
 
-        generation_match_precondition = 0
+        # delete existing object if it exists
+        if blob.exists(): blob.delete()
+
+        generation_match_precondition=0
 
         # upload to storage bucket
         blob.upload_from_filename(source_file_name, if_generation_match=generation_match_precondition)
@@ -161,13 +165,13 @@ class TikTalkKafkaConsumer:
             logger.info(script)
 
             # TODO, use text to speech to generate audio files and upload to google cloud bucket
-            audio = self.audio(script)
+            audio_file_name = self.audio(script, "_audio.mp3")
 
             # TODO, upload mp3 file to google cloud storage bucket
             bucket_name = "tiktalk-bucket"
-            source_file_name="audio.mp3"
+            source_file_name=audio_file_name
             destination_blob_name = "outputs/audio.mp3"
-            self.upload_blob(bucket_name, source_file_name,destination_blob_name)
+            self.upload_blob(bucket_name, source_file_name, destination_blob_name)
 
             return True
 
