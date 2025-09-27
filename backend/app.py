@@ -4,7 +4,11 @@ import os
 from services.database_service import db_service
 from routes.file_processing import file_processing_bp
 from routes.user_routes import user_bp
+from routes.video_routes import video_bp
+from routes.notes_routes import notes_bp
 from models.user import User
+from models.video import Video
+from models.notes import Notes
 from confluent_kafka import Producer
 from google.cloud import storage
 from google.api_core.exceptions import GoogleAPIError
@@ -24,11 +28,16 @@ def create_app():
     )
     bucket = gcs_client.bucket(BUCKET_NAME)
 
+    # Register blueprints
     app.register_blueprint(file_processing_bp, url_prefix='/api/files')
     app.register_blueprint(user_bp, url_prefix='/api')
+    app.register_blueprint(video_bp, url_prefix='/api')
+    app.register_blueprint(notes_bp, url_prefix='/api')
     
     # Initialize database tables
     User.create_table()
+    Video.create_table()
+    Notes.create_table()
 
     @app.route("/health")
     def health_check():
@@ -53,4 +62,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5000)

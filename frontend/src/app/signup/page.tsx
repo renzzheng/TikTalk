@@ -49,7 +49,7 @@ export default function SignUp() {
 
       console.log("✅ User created:", user.uid);
       console.log("🔑 Token:", token);
-      // Make api call to backend to store user in DB
+
       // ...
     } catch (err) {
       if (err instanceof FirebaseError) {
