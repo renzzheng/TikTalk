@@ -15,13 +15,11 @@ import pytesseract
 from confluent_kafka import Consumer, KafkaError
 
 import os
-
 from google import genai
 from google.cloud import texttospeech
 
 from dotenv import load_dotenv
 load_dotenv()
-
 
 # Logging setup
 logging.basicConfig(
@@ -47,11 +45,6 @@ def extract_text_from_pdf(pdf_bytes: io.BytesIO) -> str:
             extracted_text.append(page_text)
 
     return "\n".join(extracted_text)
-
-# # (2) use google cloud tts to create audio
-# def audio():
-#     tts_client = 
-
 
 class TikTalkKafkaConsumer:
     def __init__(self):
@@ -87,10 +80,34 @@ class TikTalkKafkaConsumer:
             model="gemini-2.5-flash", # is this the correct model?
             contents=prompt
         )
-        print(response)
 
-        return response.output_text 
+        script_text = response.candidates[0].content.parts[0].text
+        print(script_text)
+
+        return script_text
     
+    # (2) use google cloud tts to create audio
+    def audio(self, text: str, output_filename="audio.mp3") -> str:
+            client = texttospeech.TextToSpeechClient()
+            # set the text input to be synthesized
+            synthesis_input = texttospeech.SynthesisInput(text=text)
+            # build voice request, select language code and the voice gender
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+            )
+            # select the type of audio file you want returned
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+            # perform the tts request on the text input with the selected voice parameters and audio file type
+            response = client.synthesize_speech(
+                input=synthesis_input, voice=voice, audio_config=audio_config
+            )
+            # the respons's audio_content is binary
+            with open("output.mp3", "wb") as out:
+                # Write the response to the output file.
+                out.write(response.audio_content)
+                print('Audio content written to file "output.mp3"')
 
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
@@ -119,15 +136,14 @@ class TikTalkKafkaConsumer:
             script = self.script(full_text)
 
             # TODO, use text to speech to generate audio files and upload to google cloud bucket
-            # audio()
+            audio = self.audio(script)
 
             logger.info("--- GENERATED TIKTOK SCRIPT ---")
             logger.info(script)
 
-            with open("output.text", "w", encoding="utf-8") as f:
-                f.write(script)
-            print(os.getcwd())
-            
+            # with open("output.txt", "w", encoding="utf-8") as f:
+            #     f.write(script)
+
             return True
 
         except Exception as e:
