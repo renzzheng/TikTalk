@@ -10,7 +10,6 @@ export function useFirebaseAuth(): Auth | null {
   useEffect(() => {
     try {
       const app = getFirebaseApp(); // initialize app **inside the hook**
-      console.log("Firebase App initialized:", app.options);
       const authInstance = getAuth(app);
 
       setAuth(authInstance);
