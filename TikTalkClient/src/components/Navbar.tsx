@@ -54,6 +54,17 @@ export function Navbar() {
                             </NavigationMenu.Link>
                         </NavigationMenu.Item>
 
+                        <NavigationMenu.Item>
+                            <NavigationMenu.Link asChild>
+                                <Link
+                                    href="/signup"
+                                    className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
+                                >
+                                    Sign Up
+                                </Link>
+                            </NavigationMenu.Link>
+                        </NavigationMenu.Item>
+
                     </NavigationMenu.List>
                 </NavigationMenu.Root>
             </div>
