@@ -22,26 +22,26 @@ export default function Home() {
           
           <div className="group relative w-64 h-64 rounded-2xl overflow-hidden shadow-lg cursor-pointer transform transition duration-300 hover:scale-105 hover:shadow-2xl">
             <Image
-              src="/images/sample1.jpg"
+              src="/pdfimg.png"
               alt="Sample 1"
               fill
               className="object-cover transition-opacity duration-300 group-hover:opacity-80"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-center p-2 opacity-0 group-hover:opacity-100 transition duration-300">
-              Caption 1
+              PDF
             </div>
           </div>
 
           
           <div className="group relative w-64 h-64 rounded-2xl overflow-hidden shadow-lg cursor-pointer transform transition duration-300 hover:scale-105 hover:shadow-2xl">
             <Image
-              src="/images/sample2.jpg"
+              src="/mp4img.png"
               alt="Sample 2"
               fill
               className="object-cover transition-opacity duration-300 group-hover:opacity-80"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-center p-2 opacity-0 group-hover:opacity-100 transition duration-300">
-              Caption 2
+              MP4
             </div>
           </div>
 
@@ -57,13 +57,13 @@ export default function Home() {
        
           <div className="group relative w-64 h-64 rounded-2xl overflow-hidden shadow-lg cursor-pointer transform transition duration-300 hover:scale-105 hover:shadow-2xl">
             <Image
-              src="/images/sample3.jpg"
+              src="/ttlogo.svg"
               alt="Sample 3"
               fill
               className="object-cover transition-opacity duration-300 group-hover:opacity-80"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-center p-2 opacity-0 group-hover:opacity-100 transition duration-300">
-              Caption 3
+              TIKTALK
             </div>
           </div>
         </div>
