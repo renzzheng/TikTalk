@@ -1,8 +1,6 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask
 from dotenv import load_dotenv
 import os
-import io 
-import requests
 from services.database_service import db_service
 from routes.file_processing import file_processing_bp
 from confluent_kafka import Producer
@@ -30,7 +28,6 @@ def create_app():
     def health_check():
         """Health check endpoint"""
         db_status = db_service.test_connection()
-        gcp_link_status = gcp_link_service.test_connection()
 
         try:
             blobs = list(bucket.list_blobs(max_results=1))
@@ -39,14 +36,14 @@ def create_app():
             gcs_status = False
 
         return {
-            "status": "healthy" if db_status and gcp_link_status and gcs_status else "degraded",
+            "status": "healthy" if db_status and gcs_status else "degraded",
             "services": {
-                "gcp_link": "connected" if gcp_link_status else "disconnected",
                 "rds": "connected" if db_status else "disconnected",
                 "gcs": "connected" if gcs_status else "disconnected"
             }
         }
     
+    return app
 
 if __name__ == "__main__":
     app = create_app()
