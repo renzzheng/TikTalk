@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 import os
 from services.database_service import db_service
 from routes.file_processing import file_processing_bp
+from routes.user_routes import user_bp
+from models.user import User
 from confluent_kafka import Producer
 from google.cloud import storage
 from google.api_core.exceptions import GoogleAPIError
@@ -23,6 +25,10 @@ def create_app():
     bucket = gcs_client.bucket(BUCKET_NAME)
 
     app.register_blueprint(file_processing_bp, url_prefix='/api/files')
+    app.register_blueprint(user_bp, url_prefix='/api')
+    
+    # Initialize database tables
+    User.create_table()
 
     @app.route("/health")
     def health_check():
