@@ -17,10 +17,10 @@ class NotesStatus(Enum):
 class Notes:
     def __init__(self, id=None, firebase_uid=None, notes_link=None, status=NotesStatus.NOT_STARTED, user=None):
         self.id = id
-        self.firebase_uid = firebase_uid  # Foreign key reference to users.firebase_uid
+        self.firebase_uid = firebase_uid
         self.notes_link = notes_link
         self.status = status.value if isinstance(status, NotesStatus) else status
-        self.user = user  # User instance (lazy loaded)
+        self.user = user
     
     @classmethod
     def create_table(cls):
