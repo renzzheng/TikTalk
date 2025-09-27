@@ -14,7 +14,7 @@ export default function Home() {
     <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
     
       <div className="flex flex-col items-center justify-center text-center space-y-6 flex-grow">
-        <Header headerText="Welcome to TikTalk" />
+        <Header headerText="Welcome to TikTalk" subtext="Discover a new way to create, share, and comment. Our platform makes it simple and intuitive to get started."/>
         <Button onClick={handleGetStarted}>Get Started</Button>
 
        
