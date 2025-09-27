@@ -3,8 +3,10 @@
 import * as NavigationMenu from "@radix-ui/react-navigation-menu";
 import Link from "next/link";
 import Image from "next/image";
+import { isUserLoggedIn, signUserOut } from "@/hooks/useFirebaseAuth";
 
 export function Navbar() {
+    const isLoggedIn = isUserLoggedIn();
     return (
         <nav className="w-full bg-gray-900 text-white shadow-md">
             <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
@@ -43,17 +45,20 @@ export function Navbar() {
                             </NavigationMenu.Link>
                         </NavigationMenu.Item>
 
-                        <NavigationMenu.Item>
-                            <NavigationMenu.Link asChild>
-                                <Link
-                                    href="/login"
-                                    className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
-                                >
-                                    Log In
-                                </Link>
-                            </NavigationMenu.Link>
-                        </NavigationMenu.Item>
+                        {!isLoggedIn && (
+                            <NavigationMenu.Item>
+                                <NavigationMenu.Link asChild>
+                                    <Link
+                                        href="/login"
+                                        className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
+                                    >
+                                        Log In
+                                    </Link>
+                                </NavigationMenu.Link>
+                            </NavigationMenu.Item>
+                        )}
 
+                        {!isLoggedIn && (
                         <NavigationMenu.Item>
                             <NavigationMenu.Link asChild>
                                 <Link
@@ -64,6 +69,21 @@ export function Navbar() {
                                 </Link>
                             </NavigationMenu.Link>
                         </NavigationMenu.Item>
+                        )}
+
+                        {isLoggedIn && (
+                            <NavigationMenu.Item>
+                                <NavigationMenu.Link asChild>
+                                    <Link
+                                        href="/login"
+                                        className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
+                                        onClick={signUserOut}
+                                    >
+                                        Sign Out
+                                    </Link>
+                                </NavigationMenu.Link>
+                            </NavigationMenu.Item>
+                        )}
 
                     </NavigationMenu.List>
                 </NavigationMenu.Root>
