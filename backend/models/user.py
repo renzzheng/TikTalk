@@ -1,24 +1,26 @@
 """
-User model for TikTalk API Service
+User model for TikTalk API Service with Firebase integration
 """
 
 from services.database_service import db_service
 import logging
 
 class User:
-    def __init__(self, username, email, full_name):
-        self.username = username
+    def __init__(self, firebase_uid, email, full_name, username=None):
+        self.firebase_uid = firebase_uid  # Primary key - Firebase UID
         self.email = email
         self.full_name = full_name
+        self.username = username  # Optional display name
     
     @classmethod
     def create_table(cls):
         """Create the users table if it doesn't exist"""
         create_table_query = """
         CREATE TABLE IF NOT EXISTS users (
-            username VARCHAR(50) PRIMARY KEY,
+            firebase_uid VARCHAR(128) PRIMARY KEY,
             email VARCHAR(255) UNIQUE NOT NULL,
             full_name VARCHAR(255) NOT NULL,
+            username VARCHAR(50) UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -34,23 +36,40 @@ class User:
     def save(self):
         """Save user to database"""
         insert_query = """
-        INSERT INTO users (username, email, full_name)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (username) DO UPDATE SET
+        INSERT INTO users (firebase_uid, email, full_name, username)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (firebase_uid) DO UPDATE SET
             email = EXCLUDED.email,
             full_name = EXCLUDED.full_name,
+            username = EXCLUDED.username,
             updated_at = CURRENT_TIMESTAMP
         """
         
-        params = (self.username, self.email, self.full_name)
+        params = (self.firebase_uid, self.email, self.full_name, self.username)
         result = db_service.execute_query(insert_query, params)
         
         if result['success']:
-            logging.info(f"User {self.username} saved successfully")
+            logging.info(f"User {self.firebase_uid} saved successfully")
         else:
-            logging.error(f"Failed to save user {self.username}: {result['error']}")
+            logging.error(f"Failed to save user {self.firebase_uid}: {result['error']}")
         
         return result
+    
+    @classmethod
+    def get_by_firebase_uid(cls, firebase_uid):
+        """Get user by Firebase UID"""
+        query = "SELECT * FROM users WHERE firebase_uid = %s"
+        result = db_service.execute_query(query, (firebase_uid,), fetch_one=True)
+        
+        if result['success'] and result['data']:
+            user_data = result['data']
+            return cls(
+                firebase_uid=user_data['firebase_uid'],
+                email=user_data['email'],
+                full_name=user_data['full_name'],
+                username=user_data['username']
+            )
+        return None
     
     @classmethod
     def get_by_username(cls, username):
@@ -61,9 +80,10 @@ class User:
         if result['success'] and result['data']:
             user_data = result['data']
             return cls(
-                username=user_data['username'],
+                firebase_uid=user_data['firebase_uid'],
                 email=user_data['email'],
-                full_name=user_data['full_name']
+                full_name=user_data['full_name'],
+                username=user_data['username']
             )
         return None
     
@@ -76,9 +96,10 @@ class User:
         if result['success'] and result['data']:
             user_data = result['data']
             return cls(
-                username=user_data['username'],
+                firebase_uid=user_data['firebase_uid'],
                 email=user_data['email'],
-                full_name=user_data['full_name']
+                full_name=user_data['full_name'],
+                username=user_data['username']
             )
         return None
     
@@ -86,10 +107,11 @@ class User:
     def to_dict(self):
         """Convert user to dictionary"""
         return {
-            'username': self.username,
+            'firebase_uid': self.firebase_uid,
             'email': self.email,
-            'full_name': self.full_name
+            'full_name': self.full_name,
+            'username': self.username
         }
     
     def __repr__(self):
-        return f"User(username='{self.username}', email='{self.email}', full_name='{self.full_name}')"
+        return f"User(firebase_uid='{self.firebase_uid}', email='{self.email}', full_name='{self.full_name}', username='{self.username}')"
