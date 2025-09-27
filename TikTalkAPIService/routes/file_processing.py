@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from confluent_kafka import Producer
 import json
-import os
 import time
 
 file_processing_bp = Blueprint('file_processing', __name__)

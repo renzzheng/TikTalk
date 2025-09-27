@@ -12,6 +12,11 @@ node_modules
 
 # testing
 /coverage
+/venv
+__pycache__/
+*.pyc
+.DS_Store
+
 
 # next.js
 /.next/*
