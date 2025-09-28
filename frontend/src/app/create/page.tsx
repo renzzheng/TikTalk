@@ -14,7 +14,6 @@ export default function Upload() {
   const auth = useFirebaseAuth();
 
   const MAX_FILES = 5;
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   // Listen for auth state changes
   useEffect(() => {
@@ -33,12 +32,15 @@ export default function Upload() {
     const files = Array.from(e.target.files);
 
     const validFiles = files.filter((file) => {
-      if (file.type !== "application/pdf") {
-        alert(`${file.name} is not a PDF file.`);
-        return false;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        alert(`${file.name} exceeds the 10MB size limit.`);
+      // Check if file type is supported
+      const supportedTypes = [
+        "application/pdf", // PDF files
+        "video/mp4", "video/quicktime", "video/x-msvideo", // Video files
+        "audio/mpeg", "audio/wav", "audio/mp4", "audio/x-m4a" // Audio files
+      ];
+      
+      if (!supportedTypes.includes(file.type)) {
+        alert(`${file.name} is not a supported file type. Supported: PDF, MP4, MP3, WAV, M4A`);
         return false;
       }
       return true;
@@ -94,14 +96,14 @@ export default function Upload() {
       // Step 3: Call Flask /process-pdf API with Bearer token
       console.log(token)
       if (uploadedUrls.length > 0) {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/files/process-pdf`;
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/files/process-files`;
         const res2 = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ pdf_urls: uploadedUrls }),
+          body: JSON.stringify({ file_urls: uploadedUrls }),
         });
   
         const json = await res2.json();
@@ -126,7 +128,7 @@ export default function Upload() {
   if (!auth) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
-        <Header headerText="Upload PDFs" />
+        <Header headerText="Upload Files" />
         <div className="flex flex-col items-center mt-10 space-y-6 w-full max-w-lg">
           <p>Loading...</p>
         </div>
@@ -138,7 +140,7 @@ export default function Upload() {
   if (!user) {
     return (
       <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
-        <Header headerText="Upload PDFs" />
+        <Header headerText="Upload Files" />
         <div className="flex flex-col items-center mt-10 space-y-6 w-full max-w-lg">
           <p className="text-center">You must be logged in to upload files.</p>
           <Button onClick={() => window.location.href = '/login'}>Go to Login</Button>
@@ -152,16 +154,16 @@ export default function Upload() {
       <Header headerText="Upload PDFs" />
 
       <div className="flex flex-col items-center mt-10 space-y-6 w-full max-w-lg">
-        <Button onClick={handleSelectClick}>Select PDF Files</Button>
+        <Button onClick={handleSelectClick}>Select Files</Button>
         <p className="text-sm text-gray-200">
-          Accepted: PDF only • Max {MAX_FILES} files • Max {MAX_FILE_SIZE / (1024 * 1024)}MB each
+          Accepted: PDF, MP4, MP3, WAV, M4A • Max {MAX_FILES} files • No size limit
         </p>
 
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept=".pdf"
+          accept=".pdf,.mp4,.mp3,.wav,.m4a,.mov,.mkv"
           multiple
           className="hidden"
         />
@@ -176,7 +178,9 @@ export default function Upload() {
                   className="flex justify-between items-center border border-gray-300 rounded-md p-2"
                 >
                   <span>
-                    {file.name} ({Math.round(file.size / 1024)} KB)
+                    {file.name} ({file.size > 1024 * 1024 ? 
+                      `${Math.round(file.size / (1024 * 1024))} MB` : 
+                      `${Math.round(file.size / 1024)} KB`})
                   </span>
                   <button
                     onClick={() => handleRemoveFile(index)}
