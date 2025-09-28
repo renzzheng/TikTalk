@@ -56,7 +56,6 @@ def create_notes():
                 'status': 'error'
             }), 400
         
-        title = data['title'].strip()
         notes_link = data['notes_link'].strip()
         status = data.get('status', 'not_started').strip()
         
@@ -84,7 +83,7 @@ def create_notes():
             }), 400
         
         # Create new notes
-        notes = Notes(firebase_uid=firebase_uid, title=title, notes_link=notes_link, status=status)
+        notes = Notes(firebase_uid=firebase_uid, notes_link=notes_link, status=status)
         result = notes.save()
         
         if result['success']:
