@@ -15,26 +15,41 @@ class NotesStatus(Enum):
     COMPLETED = "completed"
 
 class Notes:
-    def __init__(self, id=None, firebase_uid=None, notes_link=None, status=NotesStatus.NOT_STARTED, user=None):
+    def __init__(self, id=None, firebase_uid=None, notes_link=None, videos_link=None, status=NotesStatus.NOT_STARTED, user=None):
         self.id = id
         self.firebase_uid = firebase_uid
         self.notes_link = notes_link
+        self.videos_link = videos_link
         self.status = status.value if isinstance(status, NotesStatus) else status
         self.user = user
     
     @classmethod
     def create_table(cls):
         """Create the notes table if it doesn't exist"""
+        # Check if table exists first
+        check_table_query = """
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'notes'
+        );
+        """
+        
+        check_result = db_service.execute_query(check_table_query, fetch_one=True)
+        if check_result['success'] and check_result['data'] and check_result['data']['exists']:
+            logging.info("Notes table already exists, skipping creation")
+            return True
+        
+        # Create the table with correct schema
         create_table_query = """
-        CREATE TABLE IF NOT EXISTS notes (
+        CREATE TABLE notes (
             id SERIAL PRIMARY KEY,
             firebase_uid VARCHAR(128) NOT NULL,
             notes_link TEXT NOT NULL,
+            videos_link TEXT DEFAULT NULL,
             status VARCHAR(20) NOT NULL DEFAULT 'not_started',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (firebase_uid) REFERENCES users(firebase_uid) ON DELETE CASCADE,
-            CONSTRAINT fk_notes_user FOREIGN KEY (firebase_uid) REFERENCES users(firebase_uid),
             CHECK (status IN ('not_started', 'started', 'scripted', 'audio_generated', 'video_generated', 'completed'))
         );
         """
@@ -46,15 +61,47 @@ class Notes:
             logging.error(f"Failed to create notes table: {result['error']}")
         return result['success']
     
+    @classmethod
+    def recreate_table(cls):
+        """Force recreate the notes table (drops existing data)"""
+        # First drop the table if it exists
+        drop_table_query = "DROP TABLE IF EXISTS notes CASCADE;"
+        drop_result = db_service.execute_query(drop_table_query)
+        if drop_result['success']:
+            logging.info("Notes table dropped successfully")
+        else:
+            logging.warning(f"Failed to drop notes table (may not exist): {drop_result['error']}")
+        
+        # Create the table with correct schema
+        create_table_query = """
+        CREATE TABLE notes (
+            id SERIAL PRIMARY KEY,
+            firebase_uid VARCHAR(128) NOT NULL,
+            notes_link TEXT NOT NULL,
+            videos_link TEXT DEFAULT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'not_started',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CHECK (status IN ('not_started', 'started', 'scripted', 'audio_generated', 'video_generated', 'completed'))
+        );
+        """
+        
+        result = db_service.execute_query(create_table_query)
+        if result['success']:
+            logging.info("Notes table recreated successfully")
+        else:
+            logging.error(f"Failed to recreate notes table: {result['error']}")
+        return result['success']
+    
     def save(self):
         """Save notes to database"""
         insert_query = """
-        INSERT INTO notes (firebase_uid, notes_link, status)
-        VALUES (%s, %s, %s)
+        INSERT INTO notes (firebase_uid, notes_link, videos_link, status)
+        VALUES (%s, %s, %s, %s)
         RETURNING id
         """
         
-        params = (self.firebase_uid, self.notes_link, self.status)
+        params = (self.firebase_uid, self.notes_link, self.videos_link or None, self.status)
         result = db_service.execute_query(insert_query, params, fetch_one=True)
         
         if result['success'] and result['data']:
@@ -77,6 +124,7 @@ class Notes:
                 id=notes_data['id'],
                 firebase_uid=notes_data['firebase_uid'],
                 notes_link=notes_data['notes_link'],
+                videos_link=notes_data['videos_link'],
                 status=notes_data['status']
             )
         return None
@@ -94,6 +142,7 @@ class Notes:
                     id=notes_data['id'],
                     firebase_uid=notes_data['firebase_uid'],
                     notes_link=notes_data['notes_link'],
+                    videos_link=notes_data['videos_link'],
                     status=notes_data['status']
                 ))
             return notes
@@ -112,6 +161,7 @@ class Notes:
                     id=notes_data['id'],
                     firebase_uid=notes_data['firebase_uid'],
                     notes_link=notes_data['notes_link'],
+                    videos_link=notes_data['videos_link'],
                     status=notes_data['status']
                 ))
             return notes
@@ -130,6 +180,7 @@ class Notes:
                     id=notes_data['id'],
                     firebase_uid=notes_data['firebase_uid'],
                     notes_link=notes_data['notes_link'],
+                    videos_link=notes_data['videos_link'],
                     status=notes_data['status']
                 ))
             return notes
@@ -139,11 +190,11 @@ class Notes:
         """Update notes in database"""
         update_query = """
         UPDATE notes 
-        SET notes_link = %s, status = %s, updated_at = CURRENT_TIMESTAMP
+        SET notes_link = %s, videos_link = %s, status = %s, updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """
         
-        params = (self.notes_link, self.status, self.id)
+        params = (self.notes_link, self.videos_link, self.status, self.id)
         result = db_service.execute_query(update_query, params)
         
         if result['success']:
@@ -201,6 +252,7 @@ class Notes:
             'id': self.id,
             'firebase_uid': self.firebase_uid,
             'notes_link': self.notes_link,
+            'videos_link': self.videos_link,
             'status': self.status
         }
         

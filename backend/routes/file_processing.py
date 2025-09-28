@@ -2,14 +2,16 @@ from flask import Blueprint, request, jsonify
 from confluent_kafka import Producer
 import json
 import time
-
+import uuid
 from dotenv import load_dotenv
 import os
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote
+
+from models.notes import Notes, NotesStatus
+from services.firebase_auth import require_auth, get_current_firebase_uid
+from models.user import User
+
 file_processing_bp = Blueprint('file_processing', __name__)
-
-
-
 load_dotenv()
 
 # Google Cloud Storage config
@@ -17,67 +19,19 @@ GCLOUD_PROJECT = os.getenv("GCLOUD_PROJECT")
 GCS_CREDENTIALS = os.getenv("GCS_CREDENTIALS")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
-
 # Kafka producer configuration
 def get_kafka_producer():
     return Producer({'bootstrap.servers': 'localhost:9092'})
 
-# @file_processing_bp.route('/process-pdf', methods=['POST'])
-# def process_pdf():
-#     """
-#     API endpoint to process a single PDF from Google Cloud Storage bucket
-#     Accepts a PDF URL and sends it to Kafka for async processing
-#     """
-#     try:
-#         data = request.get_json()
-        
-#         if not data or 'pdf_url' not in data:
-#             return jsonify({
-#                 'error': 'Missing pdf_url in request body',
-#                 'status': 'error'
-#             }), 400
-        
-#         pdf_url = data['pdf_url']
-        
-#         # Validate that it's a Google Cloud Storage URL
-#         if not pdf_url.startswith('gs://') and 'storage.googleapis.com' not in pdf_url:
-#             return jsonify({
-#                 'error': 'Invalid Google Cloud Storage URL format',
-#                 'status': 'error'
-#             }), 400
-        
-#         producer = get_kafka_producer()
-#         message = {
-#             'pdf_url': pdf_url,
-#             'timestamp': str(time.time()),
-#             'status': 'pending'
-#         }
-        
-#         producer.produce(
-#             'pdf-processing',
-#             value=json.dumps(message).encode('utf-8'),
-#             callback=lambda err, msg: print(f'Message delivered: {msg}') if err is None else print(f'Message delivery failed: {err}')
-#         )
-#         producer.flush()
-        
-#         return jsonify({
-#             'message': 'PDF processing request submitted successfully',
-#             'pdf_url': pdf_url,
-#             'status': 'accepted',
-#             'processing_id': message['timestamp']
-#         }), 202
-        
-#     except Exception as e:
-#         return jsonify({
-#             'error': f'Failed to process PDF request: {str(e)}',
-#             'status': 'error'
-#         }), 500
 
 @file_processing_bp.route('/process-pdf', methods=['POST'])
+@require_auth
 def process_multiple_pdfs():
     """
     Accepts list of PDF URLs, normalizes them,
+    creates a Notes entry in DB (notes_link = folder prefix),
     and pushes a single message with all URLs to Kafka for async processing.
+    Requires Firebase authentication.
     """
     try:
         data = request.get_json()
@@ -112,9 +66,36 @@ def process_multiple_pdfs():
 
             normalized_urls.append(gcs_url)
 
-        # Build a single Kafka message with all URLs
+        firebase_uid = get_current_firebase_uid()
+        user = User.get_by_firebase_uid(firebase_uid)
+        if not user:
+            return jsonify({
+                "error": "User not registered. Please register first.",
+                "status": "error"
+            }), 404
+
+        unique_id = str(uuid.uuid4())
+        notes_folder = f"notes/{firebase_uid}/{unique_id}/"
+        notes_link = f"https://storage.googleapis.com/{BUCKET_NAME}/{notes_folder}"
+
+        notes = Notes(
+            firebase_uid=firebase_uid,
+            notes_link=notes_link,
+            status=NotesStatus.NOT_STARTED
+        )
+        save_result = notes.save()
+        if not save_result['success']:
+            return jsonify({
+                "error": f"Failed to create notes entry: {save_result.get('error', 'Unknown error')}",
+                "status": "error",
+            }), 500
+
+        # Kafka message payload
         message = {
-            "pdf_urls": normalized_urls,   # ✅ send as list
+            "notes_id": notes.id,
+            "firebase_uid": firebase_uid,
+            "pdf_urls": normalized_urls,
+            "notes_link": notes_link,
             "bucket": BUCKET_NAME,
             "project": GCLOUD_PROJECT,
             "timestamp": str(time.time()),
@@ -133,12 +114,11 @@ def process_multiple_pdfs():
         )
         producer.flush()
 
-        results = [
-            {"pdf_url": url, "status": "accepted"} for url in normalized_urls
-        ]
+        results = [{"pdf_url": url, "status": "accepted"} for url in normalized_urls]
 
         return jsonify({
-            "message": "Multiple PDF processing requests submitted successfully (one Kafka message)",
+            "message": "PDF processing request accepted",
+            "notes": notes.to_dict(),
             "results": results,
             "status": "accepted",
         }), 202

@@ -39,7 +39,7 @@ def create_app():
     # Initialize database tables
     User.create_table()
     Video.create_table()
-    Notes.create_table()
+    Notes.create_table()  # Create notes table
 
     @app.route("/health")
     def health_check():

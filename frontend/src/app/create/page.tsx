@@ -1,16 +1,30 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/Button";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 export default function Upload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const auth = useFirebaseAuth();
 
   const MAX_FILES = 5;
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  // Listen for auth state changes
+  useEffect(() => {
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+      });
+      return () => unsubscribe();
+    }
+  }, [auth]);
 
   const handleSelectClick = () => fileInputRef.current?.click();
 
@@ -45,44 +59,54 @@ export default function Upload() {
   const handleUploadAndProcess = async () => {
     setProcessing(true);
     setMessage("");
-
+  
     try {
       const uploadedUrls: string[] = [];
-
+  
+      // Step 1: Upload files to Next.js API route → returns signed GCS URLs
       for (const file of selectedFiles) {
         const formData = new FormData();
         formData.append("file", file);
-
-        // Upload to Next.js API route
+  
         const res = await fetch("/api/upload", {
           method: "POST",
           body: formData,
         });
-
+  
         if (res.ok) {
           const data = await res.json();
-          // ✅ Backend now returns full GCS URL
           uploadedUrls.push(data.url);
           console.log(`${file.name} uploaded → ${data.url}`);
         } else {
           console.error(`Failed to upload ${file.name}`);
         }
       }
+  
+      // Step 2: Get Firebase ID token
+      if (!user) {
+        setMessage("You must be logged in to continue ❌");
+        setProcessing(false);
+        return;
+      }
 
+      const token = await user.getIdToken();
+  
+      // Step 3: Call Flask /process-pdf API with Bearer token
+      console.log(token)
       if (uploadedUrls.length > 0) {
-        // Call Flask backend to process uploaded files
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/files/process-pdf2`;
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/files/process-pdf`;
         const res2 = await fetch(apiUrl, {
           method: "POST",
           headers: {
+            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ pdf_urls: uploadedUrls }),
         });
-
+  
         const json = await res2.json();
         console.log("Process API response:", json);
-
+  
         if (res2.ok) {
           setMessage("Processing started successfully ✅");
         } else {
@@ -96,6 +120,32 @@ export default function Upload() {
       setProcessing(false);
     }
   };
+  
+
+  // Show loading state while auth is initializing
+  if (!auth) {
+    return (
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
+        <Header headerText="Upload PDFs" />
+        <div className="flex flex-col items-center mt-10 space-y-6 w-full max-w-lg">
+          <p>Loading...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Show login prompt if user is not authenticated
+  if (!user) {
+    return (
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
+        <Header headerText="Upload PDFs" />
+        <div className="flex flex-col items-center mt-10 space-y-6 w-full max-w-lg">
+          <p className="text-center">You must be logged in to upload files.</p>
+          <Button onClick={() => window.location.href = '/login'}>Go to Login</Button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">

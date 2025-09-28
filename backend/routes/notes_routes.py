@@ -304,7 +304,7 @@ def update_notes(notes_id):
 @notes_bp.route('/notes/<int:notes_id>/status', methods=['PATCH'])
 @require_auth
 def update_notes_status(notes_id):
-    """Update only the status of notes"""
+    """Update status and optionally videos_link of notes"""
     try:
         data = request.get_json()
         current_firebase_uid = get_current_firebase_uid()
@@ -342,6 +342,20 @@ def update_notes_status(notes_id):
         
         # Update status
         result = notes.update_status(new_status)
+        
+        # Update videos_link if provided
+        if 'videos_link' in data and data['videos_link']:
+            notes.videos_link = data['videos_link'].strip()
+            # Update the videos_link in database
+            update_query = """
+            UPDATE notes 
+            SET videos_link = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """
+            from services.database_service import db_service
+            db_result = db_service.execute_query(update_query, (notes.videos_link, notes.id))
+            if not db_result['success']:
+                logging.error(f"Failed to update videos_link: {db_result.get('error', 'Unknown error')}")
         
         if result['success']:
             return jsonify({
@@ -417,6 +431,92 @@ def get_available_statuses():
         
     except Exception as e:
         logging.error(f"Error getting available statuses: {str(e)}")
+        return jsonify({
+            'error': f'Internal server error: {str(e)}',
+            'status': 'error'
+        }), 500
+
+@notes_bp.route('/admin/notes/all', methods=['GET'])
+def get_all_notes_admin():
+    """Admin endpoint to get ALL notes in database (no auth required for debugging)"""
+    try:
+        all_notes = Notes.get_all()
+        
+        return jsonify({
+            'notes': [note.to_dict() for note in all_notes],
+            'count': len(all_notes),
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        logging.error(f"Error getting all notes: {str(e)}")
+        return jsonify({
+            'error': f'Internal server error: {str(e)}',
+            'status': 'error'
+        }), 500
+
+
+@notes_bp.route('/internal/notes/<int:notes_id>/status', methods=['PATCH'])
+def update_notes_status_internal(notes_id):
+    """Internal API endpoint for updating notes status (no auth required)"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'status' not in data:
+            return jsonify({
+                'error': 'Request body must contain status field',
+                'status': 'error'
+            }), 400
+        
+        # Get existing notes
+        notes = Notes.get_by_id(notes_id)
+        if not notes:
+            return jsonify({
+                'error': 'Notes not found',
+                'status': 'error'
+            }), 404
+        
+        new_status = data['status'].strip()
+        
+        # Validate status
+        if not validate_status(new_status):
+            valid_statuses = [status.value for status in NotesStatus]
+            return jsonify({
+                'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}',
+                'status': 'error'
+            }), 400
+        
+        # Update status
+        result = notes.update_status(new_status)
+        
+        # Update videos_link if provided
+        if 'videos_link' in data and data['videos_link']:
+            notes.videos_link = data['videos_link'].strip()
+            # Update the videos_link in database
+            update_query = """
+            UPDATE notes 
+            SET videos_link = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """
+            from services.database_service import db_service
+            db_result = db_service.execute_query(update_query, (notes.videos_link, notes.id))
+            if not db_result['success']:
+                logging.error(f"Failed to update videos_link: {db_result.get('error', 'Unknown error')}")
+        
+        if result['success']:
+            return jsonify({
+                'message': 'Notes status updated successfully',
+                'notes': notes.to_dict(),
+                'status': 'success'
+            }), 200
+        else:
+            return jsonify({
+                'error': f'Failed to update notes status: {result.get("error", "Unknown error")}',
+                'status': 'error'
+            }), 500
+            
+    except Exception as e:
+        logging.error(f"Error updating notes status internally: {str(e)}")
         return jsonify({
             'error': f'Internal server error: {str(e)}',
             'status': 'error'

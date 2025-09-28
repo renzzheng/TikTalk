@@ -17,6 +17,7 @@ from confluent_kafka import Consumer, KafkaError
 import os
 from google import genai
 from google.cloud import texttospeech, storage
+from .status_updater import StatusUpdater
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -58,6 +59,7 @@ class TikTalkKafkaConsumer:
         )
         self.topics = ["pdf-processing"]
         self.consumer.subscribe(self.topics)
+        self.status_updater = StatusUpdater()
         logger.info(f"Subscribed to topics: {self.topics}")
 
     def script(self, text: str) -> str:
@@ -74,7 +76,7 @@ class TikTalkKafkaConsumer:
             f"Based on this text: {text}\n"
             "Write a concise TikTok narration script split into paragraphs. "
             "Each paragraph should correspond to a separate topic"
-            "Create ten or fewer topics — fewer is better — based on the information given. "
+            "Create 3 or fewer topics — fewer is better — based on the information given. "
             "Each topic should be approximately a 20-second narration. "
             "Return only the plain transcript text — no sound cues or extra commentary. "
             "Use the text to clearly explain the topic with depth, not just surface-level facts, so the viewer learns something new. "
@@ -147,6 +149,19 @@ class TikTalkKafkaConsumer:
 
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
+            # Get notes_id from message
+            notes_id = message_data.get("notes_id")
+            if not notes_id:
+                logger.error("No notes_id in message")
+                return False
+            
+            logger.info(f"Processing PDFs for notes_id: {notes_id}")
+            
+            # Mark as started immediately when processing begins
+            if not self.status_updater.mark_as_started(notes_id):
+                logger.error(f"Failed to mark notes {notes_id} as started")
+                return False
+            
             all_text = ""
             pdf_urls = message_data.get("pdf_urls")
             if not pdf_urls or not isinstance(pdf_urls, list):
@@ -182,12 +197,15 @@ class TikTalkKafkaConsumer:
                 self.audio(para, output_filename=output_filename)
                 print(f"Audio generated: {output_filename}")
 
-            # logger.info("--- GENERATED TIKTOK SCRIPT ---")
-            # logger.info(script)
-
+            # Mark as completed when processing is done
+            success = self.status_updater.mark_as_completed(notes_id)
             
+            if success:
+                logger.info(f"Successfully completed processing for notes {notes_id}")
+            else:
+                logger.error(f"Failed to mark notes {notes_id} as completed")
 
-            return True
+            return success
 
         except Exception as e:
             logger.error(f"Error processing PDF: {str(e)}")
@@ -195,6 +213,7 @@ class TikTalkKafkaConsumer:
 
     def process_message(self, message):
         try:
+            # set the note status to started
             message_data = json.loads(message.value().decode("utf-8"))
             topic = message.topic()
             logger.info(f"Received message on {topic}: {message_data}")
