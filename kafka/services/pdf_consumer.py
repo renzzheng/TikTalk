@@ -18,6 +18,8 @@ import os
 from google import genai
 from google.cloud import texttospeech, storage
 from .status_updater import StatusUpdater
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
+import tempfile
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -146,16 +148,79 @@ class TikTalkKafkaConsumer:
             f"File {source_file_name} uploaded to {destination_blob_name}."
         )
 
+    def create_video(self, background_video_url: str, audio_file: str, output_filename: str) -> str:
+        """Create a video by combining background video with audio file."""
+        try:
+            # Download background video
+            logger.info(f"Downloading background video from: {background_video_url}")
+            response = requests.get(background_video_url)
+            if response.status_code != 200:
+                raise Exception(f"Failed to download background video: {response.status_code}")
+            
+            # Save background video to temporary file
+            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_video:
+                temp_video.write(response.content)
+                temp_video_path = temp_video.name
+            
+            # Load video and audio clips
+            video_clip = VideoFileClip(temp_video_path)
+            audio_clip = AudioFileClip(audio_file)
+            
+            # Get the duration of the audio
+            audio_duration = audio_clip.duration
+            
+            # If video is longer than audio, trim it to match audio duration
+            if video_clip.duration > audio_duration:
+                video_clip = video_clip.subclip(0, audio_duration)
+            # If video is shorter than audio, loop it to match audio duration
+            elif video_clip.duration < audio_duration:
+                loops_needed = int(audio_duration / video_clip.duration) + 1
+                video_clip = video_clip.loop(loops_needed).subclip(0, audio_duration)
+            
+            # Set the audio of the video clip to the new audio
+            final_video = video_clip.set_audio(audio_clip)
+            
+            # Write the result to file
+            final_video.write_videofile(
+                output_filename,
+                codec='libx264',
+                audio_codec='aac',
+                temp_audiofile='temp-audio.m4a',
+                remove_temp=True
+            )
+            
+            # Clean up
+            video_clip.close()
+            audio_clip.close()
+            final_video.close()
+            os.unlink(temp_video_path)
+            
+            logger.info(f"Video created successfully: {output_filename}")
+            return output_filename
+            
+        except Exception as e:
+            logger.error(f"Error creating video: {str(e)}")
+            # Clean up temp file if it exists
+            if 'temp_video_path' in locals() and os.path.exists(temp_video_path):
+                os.unlink(temp_video_path)
+            raise e
+
 
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
-            # Get notes_id from message
+            # Get notes_id and firebase_uid from message
             notes_id = message_data.get("notes_id")
+            firebase_uid = message_data.get("firebase_uid")
+            
             if not notes_id:
                 logger.error("No notes_id in message")
                 return False
             
-            logger.info(f"Processing PDFs for notes_id: {notes_id}")
+            if not firebase_uid:
+                logger.error("No firebase_uid in message")
+                return False
+            
+            logger.info(f"Processing PDFs for notes_id: {notes_id}, firebase_uid: {firebase_uid}")
             
             # Mark as started immediately when processing begins
             if not self.status_updater.mark_as_started(notes_id):
@@ -197,6 +262,38 @@ class TikTalkKafkaConsumer:
                 self.audio(para, output_filename=output_filename)
                 print(f"Audio generated: {output_filename}")
 
+            # Create videos by combining background video with each audio file
+            background_video_url = "https://storage.googleapis.com/tiktalk-bucket/background/Lunatic%20Genji%20Be%20Cuttin!.mp4"
+            
+            for i in range(1, len(paragraphs) + 1):
+                audio_file = f"output_{i}.mp3"
+                video_file = f"video_{i}.mp4"
+                
+                if os.path.exists(audio_file):
+                    try:
+                        self.create_video(background_video_url, audio_file, video_file)
+                        print(f"Video created: {video_file}")
+                        
+                        # Upload video to Google Cloud Storage with firebase_uid/notes_id structure
+                        video_path = f"{firebase_uid}/{notes_id}/video_{i}.mp4"
+                        self.upload_blob("tiktalk-bucket", video_file, video_path)
+                        print(f"Video uploaded: {video_path}")
+                        
+                        # Delete local audio file after successful video creation and upload
+                        os.remove(audio_file)
+                        logger.info(f"Deleted local audio file: {audio_file}")
+                        
+                        # Keep video file locally (not deleted)
+                        
+                    except Exception as e:
+                        logger.error(f"Error creating video {i}: {str(e)}")
+                        # Clean up audio file even if video creation failed
+                        if os.path.exists(audio_file):
+                            os.remove(audio_file)
+                            logger.info(f"Cleaned up audio file after error: {audio_file}")
+                else:
+                    logger.warning(f"Audio file not found: {audio_file}")
+
             # Mark as completed when processing is done
             success = self.status_updater.mark_as_completed(notes_id)
             
@@ -204,6 +301,7 @@ class TikTalkKafkaConsumer:
                 logger.info(f"Successfully completed processing for notes {notes_id}")
             else:
                 logger.error(f"Failed to mark notes {notes_id} as completed")
+            
 
             return success
 
