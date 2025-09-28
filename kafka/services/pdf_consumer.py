@@ -1,9 +1,3 @@
-"""
-Kafka Consumer for TikTalk
-Consumes messages with PDF URLs, extracts text (pdfplumber + pytesseract),
-and logs lecture notes.
-"""
-
 from flask import Flask, request, jsonify, send_file
 import json
 import io
@@ -13,17 +7,26 @@ import pdfplumber
 from PIL import Image
 import pytesseract
 from confluent_kafka import Consumer, KafkaError
-import tempfile
+import openai
 
 import os
 from google import genai
 from google.cloud import texttospeech, storage
+from .status_updater import StatusUpdater
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
+import tempfile
 
 from dotenv import load_dotenv
 load_dotenv()
 
-os.environ.pop("http_proxy", None)
-os.environ.pop("https_proxy", None)
+# Remove proxy environment variables that might interfere with OpenAI client
+if "http_proxy" in os.environ:
+    del os.environ["http_proxy"]
+if "https_proxy" in os.environ:
+    del os.environ["https_proxy"]
+
+# Set OpenAI API key for the client
+openai.api_key = os.environ.get("OPENAI_API_KEY", "")
 
 # Logging setup
 logging.basicConfig(
@@ -69,7 +72,7 @@ class TikTalkKafkaConsumer:
     def transcribe_vid(self, file_url: str) -> str:
         # Download the file
         response = requests.get(file_url)
-        response.raise_for_status()  # Raise error if download fails
+        response.raise_for_status()
 
         # Determine file extension
         ext = os.path.splitext(file_url)[-1].lower()
@@ -82,14 +85,34 @@ class TikTalkKafkaConsumer:
 
             # If the file is a video, extract audio first
             if ext in [".mp4", ".mov", ".mkv"]:
-                with tempfile.NamedTemporaryFile(suffix=".mp3") as audio_file:
-                    # Convert video to audio using pydub/ffmpeg
-                    audio = AudioSegment.from_file(tmp_file.name)
-                    audio.export(audio_file.name, format="mp3")
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".mp3") as audio_file:
+                        # Convert video to audio using MoviePy
+                        logger.info("Converting video to audio using MoviePy...")
+                        video_clip = VideoFileClip(tmp_file.name)
+                        audio_clip = video_clip.audio
+                        audio_clip.write_audiofile(audio_file.name, verbose=False, logger=None)
+                        
+                        # Clean up video and audio clips
+                        video_clip.close()
+                        audio_clip.close()
 
-                    # Transcribe audio using Whisper
-                    with open(audio_file.name, "rb") as f:
-                        transcript = openai.audio.transcriptions.create(
+                        # Transcribe audio using Whisper
+                        logger.info("Transcribing audio with OpenAI Whisper...")
+                        with open(audio_file.name, "rb") as f:
+                            # Use the older API format for openai 0.28.1
+                            transcript = openai.Audio.transcribe(
+                                model="whisper-1",
+                                file=f,
+                                response_format="text"
+                            )
+                except Exception as e:
+                    logger.error(f"Error processing video with MoviePy: {str(e)}")
+                    # Fallback: try to transcribe the video file directly
+                    logger.info("Attempting direct video transcription...")
+                    with open(tmp_file.name, "rb") as f:
+                        # Use the older API format for openai 0.28.1
+                        transcript = openai.Audio.transcribe(
                             model="whisper-1",
                             file=f,
                             response_format="text"
@@ -97,7 +120,8 @@ class TikTalkKafkaConsumer:
             else:
                 # Already audio: directly transcribe
                 with open(tmp_file.name, "rb") as f:
-                    transcript = openai.audio.transcriptions.create(
+                    # Use the older API format for openai 0.28.1
+                    transcript = openai.Audio.transcribe(
                         model="whisper-1",
                         file=f,
                         response_format="text"
@@ -193,22 +217,73 @@ class TikTalkKafkaConsumer:
             f"File {source_file_name} uploaded to {destination_blob_name}."
         )
 
+    def create_video(self, background_video_url: str, audio_file: str, output_filename: str) -> str:
+        """Create a video by combining background video with audio file."""
+        try:
+            # Download background video
+            logger.info(f"Downloading background video from: {background_video_url}")
+            response = requests.get(background_video_url)
+            if response.status_code != 200:
+                raise Exception(f"Failed to download background video: {response.status_code}")
+            
+            # Save background video to temporary file
+            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_video:
+                temp_video.write(response.content)
+                temp_video_path = temp_video.name
+            
+            # Load video and audio clips
+            video_clip = VideoFileClip(temp_video_path)
+            audio_clip = AudioFileClip(audio_file)
+            
+            # Get the duration of the audio
+            audio_duration = audio_clip.duration
+            
+            # If video is longer than audio, trim it to match audio duration
+            if video_clip.duration > audio_duration:
+                video_clip = video_clip.subclip(0, audio_duration)
+            # If video is shorter than audio, loop it to match audio duration
+            elif video_clip.duration < audio_duration:
+                loops_needed = int(audio_duration / video_clip.duration) + 1
+                video_clip = video_clip.loop(loops_needed).subclip(0, audio_duration)
+            
+            # Set the audio of the video clip to the new audio
+            final_video = video_clip.set_audio(audio_clip)
+            
+            # Write the result to file
+            final_video.write_videofile(
+                output_filename,
+                codec='libx264',
+                audio_codec='aac',
+                temp_audiofile='temp-audio.m4a',
+                remove_temp=True
+            )
+            
+            # Clean up
+            video_clip.close()
+            audio_clip.close()
+            final_video.close()
+            os.unlink(temp_video_path)
+            
+            logger.info(f"Video created successfully: {output_filename}")
+            return output_filename
+            
+        except Exception as e:
+            logger.error(f"Error creating video: {str(e)}")
+            # Clean up temp file if it exists
+            if 'temp_video_path' in locals() and os.path.exists(temp_video_path):
+                os.unlink(temp_video_path)
+            raise e
+
 
     def process_pdf_message(self, message_data: dict) -> bool:
         try:
-            # Get notes_id and firebase_uid from message
+            # Get notes_id from message
             notes_id = message_data.get("notes_id")
-            firebase_uid = message_data.get("firebase_uid")
-            
             if not notes_id:
                 logger.error("No notes_id in message")
                 return False
             
-            if not firebase_uid:
-                logger.error("No firebase_uid in message")
-                return False
-            
-            logger.info(f"Processing PDFs for notes_id: {notes_id}, firebase_uid: {firebase_uid}")
+            logger.info(f"Processing PDFs for notes_id: {notes_id}")
             
             # Mark as started immediately when processing begins
             if not self.status_updater.mark_as_started(notes_id):
@@ -223,13 +298,15 @@ class TikTalkKafkaConsumer:
 
             for file_url in file_urls:
                 logger.info("=" * 50)
-                logger.info(f"Processing PDF: {file_url}")
+                logger.info(f"Processing file: {file_url}")
 
                 # Handle MP4 video first
-                if file_url.endswith(".mp3"):
-                    logger.info("Detected MP4 video, transcribing...")
+                if file_url.endswith((".mp4", ".mp3", ".wav", ".m4a", ".mov", ".mkv")):
+                    logger.info("Detected audio/video file, transcribing...")
                     all_text = self.transcribe_vid(file_url)
                     script = self.script(all_text)
+                    print(script)
+                    logger.info("All scripts loaded")
                 elif file_url.endswith(".pdf"):
                     logger.info("Detected PDF, extracting text...")
                     # Download PDF
@@ -241,15 +318,15 @@ class TikTalkKafkaConsumer:
                     pdf_bytes = io.BytesIO(response.content)
                     full_text = extract_text_from_pdf(pdf_bytes)
                     all_text = all_text + full_text
-
                     # Generate TikTok script from pdf text
                     script = self.script(all_text)
                     print(script)
-
                     logger.info("All scripts loaded")
                 else:
                     logger.warning(f"Unsupported file type: {file_url}")
                     continue
+
+            print(script)
 
             # Split script by paragraphs
             paragraphs = [p.strip() for p in script.split("\n") if p.strip()]
@@ -260,12 +337,47 @@ class TikTalkKafkaConsumer:
                 self.audio(para, output_filename=output_filename)
                 print(f"Audio generated: {output_filename}")
 
-            # logger.info("--- GENERATED TIKTOK SCRIPT ---")
-            # logger.info(script)
+            # Create videos by combining background video with each audio file
+            background_video_url = "https://storage.googleapis.com/tiktalk-bucket/background/Lunatic%20Genji%20Be%20Cuttin!.mp4"
+            
+            for i in range(1, len(paragraphs) + 1):
+                audio_file = f"output_{i}.mp3"
+                video_file = f"video_{i}.mp4"
+                
+                if os.path.exists(audio_file):
+                    try:
+                        self.create_video(background_video_url, audio_file, video_file)
+                        print(f"Video created: {video_file}")
+                        
+                        # Upload video to Google Cloud Storage
+                        self.upload_blob("tiktalk-bucket", video_file, f"videos/{notes_id}/video_{i}.mp4")
+                        print(f"Video uploaded: video_{i}.mp4")
+                        
+                        # Delete local audio file after successful video creation and upload
+                        os.remove(audio_file)
+                        logger.info(f"Deleted local audio file: {audio_file}")
+                        
+                        # Keep video file locally (not deleted)
+                        
+                    except Exception as e:
+                        logger.error(f"Error creating video {i}: {str(e)}")
+                        # Clean up audio file even if video creation failed
+                        if os.path.exists(audio_file):
+                            os.remove(audio_file)
+                            logger.info(f"Cleaned up audio file after error: {audio_file}")
+                else:
+                    logger.warning(f"Audio file not found: {audio_file}")
 
+            # Mark as completed when processing is done
+            success = self.status_updater.mark_as_completed(notes_id)
+            
+            if success:
+                logger.info(f"Successfully completed processing for notes {notes_id}")
+            else:
+                logger.error(f"Failed to mark notes {notes_id} as completed")
             
 
-            return True
+            return success
 
         except Exception as e:
             logger.error(f"Error processing PDF: {str(e)}")
