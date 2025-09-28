@@ -1,8 +1,5 @@
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
-<img width="1436" height="852" alt="image" src="https://github.com/user-attachments/assets/f11aaf1b-a7ae-4caa-aff9-b1c5dfedd55e" />
-
-
 
 ## Inspiration
 With the pervasiveness of short-form content dominating entertainment and doom-scrolling becoming all too familiar, we attempted to transform this behavior into a more productive pastime. In this case, making this phenomenon more beneficial to users through an educational approach.
@@ -12,6 +9,7 @@ TikTalk is a full-stack web application that generates tiktok-styled short-form 
 
 ## How we built it
 We used Firebase, Kafka, Docker, OpenAI Whisper, Google Gemini AI, Google Cloud, Google TTS, React, Next.js, Typescript, Flask, MoviePy.
+<img width="1436" height="852" alt="image" src="https://github.com/user-attachments/assets/ef2ae342-3432-45ef-977b-e112ea2eaa9d" />
 
 ## Challenges we ran into
 One of the biggest hurdles that we did not account for, was our group's ability to work together under pressure. It was an exercise for us in trying to figure out how to synergize with each other. 
