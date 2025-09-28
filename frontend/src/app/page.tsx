@@ -4,19 +4,21 @@ import { useRouter } from "next/navigation";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import Image from "next/image";
+import { isUserLoggedIn } from "../hooks/useFirebaseAuth";
 
 export default function Home() {
   const router = useRouter(); // initialize the router
+  const loggedIn = isUserLoggedIn();
 
   const handleGetStarted = () => {
     router.push("/create"); // navigate to the upload page
   };
 
-  return (
+  const notLogged = (
     <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
       <div className="flex flex-col items-center justify-center text-center space-y-6 flex-grow">
-        <Header 
-          headerText="Welcome to TikTalk" 
+        <Header
+          headerText="Welcome to TikTalk"
           subtext="Discover a new way to create, share, and comment. Our platform makes it simple and intuitive to get started."
         />
         <Button onClick={handleGetStarted}>Get Started</Button>
@@ -79,4 +81,19 @@ export default function Home() {
       </div>
     </main>
   );
+  
+  const logged = (
+    <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
+      <div className="flex flex-col items-center justify-center text-center space-y-6 flex-grow">
+        <Header
+          headerText="Welcome Back to TikTalk"
+          subtext="Ready to create more? Click below to start uploading your files and generating engaging short-form videos."
+        />
+        <Button onClick={handleGetStarted}>Upload More Files</Button>
+      </div>
+    </main>
+  )
+
+  return (loggedIn ? logged : notLogged)
+    
 }
