@@ -23,6 +23,56 @@ BUCKET_NAME = os.getenv("BUCKET_NAME")
 def get_kafka_producer():
     return Producer({'bootstrap.servers': 'localhost:9092'})
 
+# @file_processing_bp.route('/process-pdf', methods=['POST'])
+# def process_pdf():
+#     """
+#     API endpoint to process a single PDF from Google Cloud Storage bucket
+#     Accepts a PDF URL and sends it to Kafka for async processing
+#     """
+#     try:
+#         data = request.get_json()
+        
+#         if not data or 'file_url' not in data:
+#             return jsonify({
+#                 'error': 'Missing file_url in request body',
+#                 'status': 'error'
+#             }), 400
+        
+#         file_url = data['file_url']
+        
+#         # Validate that it's a Google Cloud Storage URL
+#         if not file_url.startswith('gs://') and 'storage.googleapis.com' not in file_url:
+#             return jsonify({
+#                 'error': 'Invalid Google Cloud Storage URL format',
+#                 'status': 'error'
+#             }), 400
+        
+#         producer = get_kafka_producer()
+#         message = {
+#             'file_url': file_url,
+#             'timestamp': str(time.time()),
+#             'status': 'pending'
+#         }
+        
+#         producer.produce(
+#             'pdf-processing',
+#             value=json.dumps(message).encode('utf-8'),
+#             callback=lambda err, msg: print(f'Message delivered: {msg}') if err is None else print(f'Message delivery failed: {err}')
+#         )
+#         producer.flush()
+        
+#         return jsonify({
+#             'message': 'PDF processing request submitted successfully',
+#             'file_url': file_url,
+#             'status': 'accepted',
+#             'processing_id': message['timestamp']
+#         }), 202
+        
+#     except Exception as e:
+#         return jsonify({
+#             'error': f'Failed to process PDF request: {str(e)}',
+#             'status': 'error'
+#         }), 500
 
 @file_processing_bp.route('/process-pdf', methods=['POST'])
 @require_auth
@@ -36,13 +86,13 @@ def process_multiple_pdfs():
     try:
         data = request.get_json()
 
-        if not data or 'pdf_urls' not in data or not isinstance(data['pdf_urls'], list):
+        if not data or 'file_urls' not in data or not isinstance(data['file_urls'], list):
             return jsonify({
-                'error': 'Missing or invalid pdf_urls (expected list)',
+                'error': 'Missing or invalid file_urls (expected list)',
                 'status': 'error'
             }), 400
 
-        raw_urls = data['pdf_urls']
+        raw_urls = data['file_urls']
         normalized_urls = []
 
         for raw_url in raw_urls:
