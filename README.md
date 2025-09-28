@@ -1,4 +1,4 @@
-[![Watch the video](https://img.youtube.com/vi/B77HSg1EMX8/maxresdefault.jpg)](https://youtu.be/B77HSg1EMX8)
+[![Watch the video](https://img.youtube.com/vi/fv7-nhWqslg/maxresdefault.jpg)](https://youtu.be/fv7-nhWqslg)
 
 
 ## TikTalk
