@@ -41,6 +41,12 @@ def process_multiple_files():
                 'error': 'Missing or invalid file_urls (expected list)',
                 'status': 'error'
             }), 400
+            
+        if 'title' not in data or not data['title']:
+            return jsonify({
+                'error': 'Missing required field: title',
+                'status': 'error'
+            }), 400
 
         raw_urls = data['file_urls']
         normalized_urls = []
@@ -74,12 +80,14 @@ def process_multiple_files():
                 "status": "error"
             }), 404
 
+        title = data['title'].strip()
         unique_id = str(uuid.uuid4())
         notes_folder = f"notes/{firebase_uid}/{unique_id}/"
         notes_link = f"https://storage.googleapis.com/{BUCKET_NAME}/{notes_folder}"
 
         notes = Notes(
             firebase_uid=firebase_uid,
+            title=title,
             notes_link=notes_link,
             status=NotesStatus.NOT_STARTED
         )

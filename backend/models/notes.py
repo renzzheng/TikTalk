@@ -15,13 +15,15 @@ class NotesStatus(Enum):
     COMPLETED = "completed"
 
 class Notes:
-    def __init__(self, id=None, firebase_uid=None, notes_link=None, videos_link=None, status=NotesStatus.NOT_STARTED, user=None):
+    def __init__(self, id=None, firebase_uid=None, title=None, notes_link=None, videos_link=None, status=NotesStatus.NOT_STARTED, user=None, created_at=None):
         self.id = id
         self.firebase_uid = firebase_uid
+        self.title = title
         self.notes_link = notes_link
         self.videos_link = videos_link
         self.status = status.value if isinstance(status, NotesStatus) else status
         self.user = user
+        self.created_at = created_at
     
     @classmethod
     def create_table(cls):
@@ -96,12 +98,12 @@ class Notes:
     def save(self):
         """Save notes to database"""
         insert_query = """
-        INSERT INTO notes (firebase_uid, notes_link, videos_link, status)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO notes (firebase_uid, title, notes_link, videos_link, status)
+        VALUES (%s, %s, %s, %s, %s)
         RETURNING id
         """
         
-        params = (self.firebase_uid, self.notes_link, self.videos_link or None, self.status)
+        params = (self.firebase_uid, self.title, self.notes_link, self.videos_link or None, self.status)
         result = db_service.execute_query(insert_query, params, fetch_one=True)
         
         if result['success'] and result['data']:
@@ -123,9 +125,11 @@ class Notes:
             return cls(
                 id=notes_data['id'],
                 firebase_uid=notes_data['firebase_uid'],
+                title=notes_data['title'],
                 notes_link=notes_data['notes_link'],
                 videos_link=notes_data['videos_link'],
-                status=notes_data['status']
+                status=notes_data['status'],
+                created_at=notes_data.get('created_at')
             )
         return None
     
@@ -141,9 +145,11 @@ class Notes:
                 notes.append(cls(
                     id=notes_data['id'],
                     firebase_uid=notes_data['firebase_uid'],
+                    title=notes_data['title'],
                     notes_link=notes_data['notes_link'],
                     videos_link=notes_data['videos_link'],
-                    status=notes_data['status']
+                    status=notes_data['status'],
+                    created_at=notes_data.get('created_at')
                 ))
             return notes
         return []
@@ -160,9 +166,11 @@ class Notes:
                 notes.append(cls(
                     id=notes_data['id'],
                     firebase_uid=notes_data['firebase_uid'],
+                    title=notes_data['title'],
                     notes_link=notes_data['notes_link'],
                     videos_link=notes_data['videos_link'],
-                    status=notes_data['status']
+                    status=notes_data['status'],
+                    created_at=notes_data.get('created_at')
                 ))
             return notes
         return []
@@ -179,9 +187,11 @@ class Notes:
                 notes.append(cls(
                     id=notes_data['id'],
                     firebase_uid=notes_data['firebase_uid'],
+                    title=notes_data['title'],
                     notes_link=notes_data['notes_link'],
                     videos_link=notes_data['videos_link'],
-                    status=notes_data['status']
+                    status=notes_data['status'],
+                    created_at=notes_data.get('created_at')
                 ))
             return notes
         return []
@@ -190,11 +200,11 @@ class Notes:
         """Update notes in database"""
         update_query = """
         UPDATE notes 
-        SET notes_link = %s, videos_link = %s, status = %s, updated_at = CURRENT_TIMESTAMP
+        SET title = %s, notes_link = %s, videos_link = %s, status = %s, updated_at = CURRENT_TIMESTAMP
         WHERE id = %s
         """
         
-        params = (self.notes_link, self.videos_link, self.status, self.id)
+        params = (self.title, self.notes_link, self.videos_link, self.status, self.id)
         result = db_service.execute_query(update_query, params)
         
         if result['success']:
@@ -251,9 +261,11 @@ class Notes:
         result = {
             'id': self.id,
             'firebase_uid': self.firebase_uid,
+            'title': self.title,
             'notes_link': self.notes_link,
             'videos_link': self.videos_link,
-            'status': self.status
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if hasattr(self, 'created_at') and self.created_at else None
         }
         
         if include_user:
