@@ -30,7 +30,7 @@ def validate_status(status):
 def create_notes():
     """
     Create new notes
-    Expected JSON: {"notes_link": "string", "status": "string" (optional)}
+    Expected JSON: {"title": "string", "notes_link": "string", "status": "string" (optional)}
     """
     try:
         data = request.get_json()
@@ -44,12 +44,19 @@ def create_notes():
             }), 400
         
         # Validate required fields
+        if 'title' not in data or not data['title']:
+            return jsonify({
+                'error': 'Missing required field: title',
+                'status': 'error'
+            }), 400
+            
         if 'notes_link' not in data or not data['notes_link']:
             return jsonify({
                 'error': 'Missing required field: notes_link',
                 'status': 'error'
             }), 400
         
+        title = data['title'].strip()
         notes_link = data['notes_link'].strip()
         status = data.get('status', 'not_started').strip()
         
@@ -77,7 +84,7 @@ def create_notes():
             }), 400
         
         # Create new notes
-        notes = Notes(firebase_uid=firebase_uid, notes_link=notes_link, status=status)
+        notes = Notes(firebase_uid=firebase_uid, title=title, notes_link=notes_link, status=status)
         result = notes.save()
         
         if result['success']:

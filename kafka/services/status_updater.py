@@ -66,17 +66,27 @@ class StatusUpdater:
             logger.error(f"Error marking notes {notes_id} as started: {str(e)}")
             return False
     
-    def mark_as_completed(self, notes_id: int) -> bool:
+    def mark_as_completed(self, notes_id: int, video_links: str = None) -> bool:
         """Mark notes as completed when processing is done"""
         try:
-            fake_video_links = self.generate_fake_video_links(3)
-            logger.info(f"Updating videos for notes {notes_id} with links: {fake_video_links}")
-            
-            # First update just the videos_link
-            video_update_success = self.update_notes_status(notes_id, "started", fake_video_links)
-            if not video_update_success:
-                logger.error(f"Failed to update videos for notes {notes_id}")
-                return False
+            if video_links:
+                logger.info(f"Updating videos for notes {notes_id} with links: {video_links}")
+                
+                # First update just the videos_link
+                video_update_success = self.update_notes_status(notes_id, "started", video_links)
+                if not video_update_success:
+                    logger.error(f"Failed to update videos for notes {notes_id}")
+                    return False
+            else:
+                # Fallback to fake video links if no real links provided
+                fake_video_links = self.generate_fake_video_links(3)
+                logger.info(f"Updating videos for notes {notes_id} with fake links: {fake_video_links}")
+                
+                # First update just the videos_link
+                video_update_success = self.update_notes_status(notes_id, "started", fake_video_links)
+                if not video_update_success:
+                    logger.error(f"Failed to update videos for notes {notes_id}")
+                    return False
             
             # Then update status to completed
             logger.info(f"Marking notes {notes_id} as 'completed'")

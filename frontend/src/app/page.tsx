@@ -1,17 +1,71 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
+import { NotesGrid } from "../components/NotesGrid";
 import Image from "next/image";
-import { isUserLoggedIn } from "../hooks/useFirebaseAuth";
+import { useFirebaseAuth } from "../hooks/useFirebaseAuth";
+import { onAuthStateChanged, User } from "firebase/auth";
+
+interface Note {
+  id: number;
+  firebase_uid: string;
+  title: string;
+  notes_link: string;
+  status: string;
+  videos_link: string | null;
+  created_at: string;
+}
 
 export default function Home() {
-  const router = useRouter(); // initialize the router
-  const loggedIn = isUserLoggedIn();
+  const router = useRouter();
+  const auth = useFirebaseAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        setUser(user);
+        if (user) {
+          // Fetch user's notes
+          try {
+            setLoading(true);
+            const token = await user.getIdToken();
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/notes/my-notes`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setNotes(data.notes || []);
+              setError(null);
+            } else {
+              setError('Failed to fetch notes');
+            }
+          } catch (error) {
+            console.error('Error fetching notes:', error);
+            setError('Network error occurred');
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [auth]);
 
   const handleGetStarted = () => {
-    router.push("/create"); // navigate to the upload page
+    router.push("/create");
   };
 
   const notLogged = (
@@ -82,18 +136,42 @@ export default function Home() {
     </main>
   );
   
-  const logged = (
-    <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
-      <div className="flex flex-col items-center justify-center text-center space-y-6 flex-grow">
-        <Header
-          headerText="Welcome Back to TikTalk"
-          subtext="Ready to create more? Click below to start uploading your files and generating engaging short-form videos."
+  // Show loading state while auth is initializing
+  if (!auth) {
+    return (
+      <main className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4">
+        <Header headerText="Loading..." />
+        <div className="flex flex-col items-center mt-10 space-y-6 w-full max-w-lg">
+          <p>Loading...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Show login prompt if user is not authenticated
+  if (!user) {
+    return notLogged;
+  }
+
+  // Show logged in user with notes
+  return (
+    <main className="relative min-h-screen bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <Header
+            headerText="Your TikTalk Videos"
+            subtext="Click on any video to view and manage your generated content."
+          />
+          <Button onClick={handleGetStarted}>Upload More Files</Button>
+        </div>
+        
+        <NotesGrid 
+          notes={notes} 
+          loading={loading} 
+          error={error} 
         />
-        <Button onClick={handleGetStarted}>Upload More Files</Button>
       </div>
     </main>
-  )
-
-  return (loggedIn ? logged : notLogged)
+  );
     
 }

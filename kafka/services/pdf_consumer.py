@@ -147,8 +147,9 @@ class TikTalkKafkaConsumer:
             f"Based on this text: {text}\n"
             "Write a concise TikTok narration script split into paragraphs. "
             "Each paragraph should correspond to a separate topic"
-            "Create 3 or fewer topics — fewer is better — based on the information given. "
-            "Each topic should be approximately a 20-second narration. "
+            "Create less 10 video based on the information given less is usually better. maybe based on the topics and the texts that are there"
+            "Do not make more than 10 videos. recommendation is 5-7 videos"
+            "video should be approximately a 30-second narration. "
             "Return only the plain transcript text — no sound cues or extra commentary. "
             "Use the text to clearly explain the topic with depth, not just surface-level facts, so the viewer learns something new. "
             "Start with a strong hook, and finish with a smooth transition that connects naturally to the next subtopic. "
@@ -339,6 +340,7 @@ class TikTalkKafkaConsumer:
 
             # Create videos by combining background video with each audio file
             background_video_url = "https://storage.googleapis.com/tiktalk-bucket/background/Lunatic%20Genji%20Be%20Cuttin!.mp4"
+            video_links = []
             
             for i in range(1, len(paragraphs) + 1):
                 audio_file = f"output_{i}.mp3"
@@ -350,8 +352,13 @@ class TikTalkKafkaConsumer:
                         print(f"Video created: {video_file}")
                         
                         # Upload video to Google Cloud Storage
-                        self.upload_blob("tiktalk-bucket", video_file, f"videos/{notes_id}/video_{i}.mp4")
-                        print(f"Video uploaded: video_{i}.mp4")
+                        video_path = f"videos/{notes_id}/video_{i}.mp4"
+                        self.upload_blob("tiktalk-bucket", video_file, video_path)
+                        print(f"Video uploaded: {video_path}")
+                        
+                        # Add video link to the list
+                        video_url = f"https://storage.googleapis.com/tiktalk-bucket/{video_path}"
+                        video_links.append(video_url)
                         
                         # Delete local audio file after successful video creation and upload
                         os.remove(audio_file)
@@ -368,8 +375,9 @@ class TikTalkKafkaConsumer:
                 else:
                     logger.warning(f"Audio file not found: {audio_file}")
 
-            # Mark as completed when processing is done
-            success = self.status_updater.mark_as_completed(notes_id)
+            # Mark as completed when processing is done with actual video links
+            video_links_str = ",".join(video_links) if video_links else None
+            success = self.status_updater.mark_as_completed(notes_id, video_links_str)
             
             if success:
                 logger.info(f"Successfully completed processing for notes {notes_id}")
