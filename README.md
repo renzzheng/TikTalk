@@ -31,4 +31,4 @@ We plan to expand the capabilities of TikTalk to process larger files and additi
 
 
 ---
-Pedro Gomez | Timothy Jeon | Stanley Kim | Abijay Luthra | Ren-Zhi Zheng
+Pedro Gomez | Timothy Jeon | Stanley Kim | AJ Luthra | Ren-Zhi Zheng
