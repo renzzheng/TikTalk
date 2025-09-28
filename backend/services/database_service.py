@@ -45,9 +45,11 @@ class DatabaseService:
 
                     if fetch_one:
                         result = cursor.fetchone()
+                        conn.commit()  # Commit after fetching data
                         return {'success': True, 'data': dict(result) if result else None}
                     elif fetch_all:
                         results = cursor.fetchall()
+                        conn.commit()  # Commit after fetching data
                         return {'success': True, 'data': [dict(row) for row in results]}
                     else:
                         conn.commit()
