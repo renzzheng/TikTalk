@@ -1,5 +1,4 @@
 <img width="512" height="512" alt="image" src="https://github.com/user-attachments/assets/18d48adc-e589-4c33-a01e-ce5ea862fa1b" />
-Pedro Gomez, Timothy Jeon, Stanley Kim, Abijay Luthra, Ren-Zhi Zheng
 
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
@@ -29,3 +28,7 @@ As highlighted, we all deepened our understanding of full-stack development, clo
 
 ## What's next for TikTalk
 We plan to expand the capabilities of TikTalk to process larger files and additional file formats.
+
+
+---
+Pedro Gomez | Timothy Jeon | Stanley Kim | Abijay Luthra | Ren-Zhi Zheng
