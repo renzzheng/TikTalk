@@ -1,3 +1,5 @@
+<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/18d48adc-e589-4c33-a01e-ce5ea862fa1b" />
+
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
 
