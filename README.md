@@ -1,6 +1,7 @@
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
-![Uploading image.png…]()
+<img width="1436" height="852" alt="image" src="https://github.com/user-attachments/assets/f11aaf1b-a7ae-4caa-aff9-b1c5dfedd55e" />
+
 
 
 ## Inspiration
