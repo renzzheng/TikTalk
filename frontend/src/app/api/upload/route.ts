@@ -25,21 +25,31 @@ export async function POST(req: NextRequest) {
 
     // Convert File → Buffer
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer = Buffer.from(arrayBuffer);
 
-    // Replace this with the logged-in user’s UID from Firebase later
+    // For video files, we'll let the backend handle compression
+    // The backend will optimize videos during processing
+    console.log(`📁 File type: ${file.type}, Size: ${file.size} bytes`);
+
+    // Replace this with the logged-in user's UID from Firebase later
     const uid = "test-user";
 
     // GCS path
     const gcsPath = `${uid}/${file.name}`;
     const blob = bucket.file(gcsPath);
 
-    // Upload file
+    // Upload file with optimized settings
     await blob.save(buffer, {
       contentType: file.type || "application/pdf",
       resumable: false,
       metadata: {
         cacheControl: "public, max-age=31536000",
+        // Add metadata for video optimization
+        ...(file.type?.startsWith('video/') && {
+          'video-optimized': 'true',
+          'target-resolution': '720x1280',
+          'target-bitrate': '1000k'
+        })
       },
     });
 

@@ -22,11 +22,13 @@ export const VideoDisplay: React.FC<VideoDisplayProps> = ({ videoUrls, onBack })
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {videoUrls.map((url, index) => (
           <div key={index} className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="aspect-video bg-gray-200">
+            {/* Phone aspect ratio container (9:16) */}
+            <div className="aspect-[9/16] bg-gray-200 flex items-center justify-center">
               <video
                 controls
                 className="w-full h-full object-cover"
                 preload="metadata"
+                style={{ maxWidth: '100%', maxHeight: '100%' }}
               >
                 <source src={url} type="video/mp4" />
                 Your browser does not support the video tag.
