@@ -37,5 +37,6 @@ As highlighted, we all deepened our understanding of full-stack development, clo
 We plan to expand the capabilities of TikTalk to process larger files and additional file formats.
 
 
+
 ---
 Pedro Gomez | Timothy Jeon | Stanley Kim | AJ Luthra | Ren-Zhi Zheng
