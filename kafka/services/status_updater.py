@@ -1,8 +1,3 @@
-"""
-Status Updater Service for TikTalk Kafka Consumer
-Periodically updates notes status and video links via API calls
-"""
-
 import requests
 import time
 import logging
@@ -21,7 +16,6 @@ class StatusUpdater:
         """Generate fake video links for testing"""
         video_links = []
         for i in range(count):
-            # Generate random string for fake video ID
             video_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
             video_link = f"https://storage.googleapis.com/tiktalk-bucket/videos/{video_id}.mp4"
             video_links.append(video_link)
@@ -76,8 +70,24 @@ class StatusUpdater:
         """Mark notes as completed when processing is done"""
         try:
             fake_video_links = self.generate_fake_video_links(3)
-            logger.info(f"Marking notes {notes_id} as 'completed' with video links: {fake_video_links}")
-            return self.update_notes_status(notes_id, "completed", fake_video_links)
+            logger.info(f"Updating videos for notes {notes_id} with links: {fake_video_links}")
+            
+            # First update just the videos_link
+            video_update_success = self.update_notes_status(notes_id, "started", fake_video_links)
+            if not video_update_success:
+                logger.error(f"Failed to update videos for notes {notes_id}")
+                return False
+            
+            # Then update status to completed
+            logger.info(f"Marking notes {notes_id} as 'completed'")
+            status_update_success = self.update_notes_status(notes_id, "completed")
+            if not status_update_success:
+                logger.error(f"Failed to mark notes {notes_id} as completed")
+                return False
+            
+            logger.info(f"Successfully completed processing for notes {notes_id}")
+            return True
+            
         except Exception as e:
             logger.error(f"Error marking notes {notes_id} as completed: {str(e)}")
             return False
