@@ -1,7 +1,13 @@
-<img width="512" height="512" alt="image" src="https://github.com/user-attachments/assets/18d48adc-e589-4c33-a01e-ce5ea862fa1b" />
+[![Watch the video](https://img.youtube.com/vi/B77HSg1EMX8/maxresdefault.jpg)](https://youtu.be/B77HSg1EMX8)
+
 
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
+
+<p align="center">
+  <img width="206" height="206" alt="image" src="https://github.com/user-attachments/assets/18d48adc-e589-4c33-a01e-ce5ea862fa1b" />
+</p>
+
 
 ## Inspiration
 With the pervasiveness of short-form content dominating entertainment and doom-scrolling becoming all too familiar, we attempted to transform this behavior into a more productive pastime. In this case, making this phenomenon more beneficial to users through an educational approach.
