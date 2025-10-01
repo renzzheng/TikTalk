@@ -17,6 +17,8 @@ from google import genai
 from google.cloud import texttospeech, storage
 from .status_updater import StatusUpdater
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip, CompositeAudioClip, ColorClip, ImageClip
+from moviepy.audio.fx.all import audio_loop
+from moviepy.video.fx.all import loop
 import tempfile
 
 from dotenv import load_dotenv
@@ -147,10 +149,17 @@ class TikTalkKafkaConsumer:
         client = genai.Client(api_key=api_key)
 
         prompt = (
-            "Make the below thing in one paragraph. I need you to repeat the phrase below: also, don't make it word for word, change up the wording of 'need to study want to watch tiktok' etc.\n\n"
-            "Need to study? Want to watch TikTok though? Our attention spans are lowering according to  USC Dr. Albright's studies. As we head on, it becomes harder and harder to focus on boring content. In most cases, within minutes you'll be wondering: when will something happen? How do platforms like TikTok or Instagram prey on our shifting mindset?\n\n"
-            "\"In psychological terms [it's] called random reinforcement,\" Dr. Albrixght says. \"It means sometimes you win, sometimes you lose. And that's how these platforms are designed... they're exactly like a slot machine. Well, the one thing we know is slot machines are addictive. But we don't often talk about how our devices and these platforms and these apps do have these same addictive qualities baked into them.\"\n\n"
-            "With TikTalk, we take advantage of the ever-changing content of these videos. We combine the content of coursework, with the addictiveness of TikTok to produce short clips summarizing the most important content of the course. ."
+            f"Based on this text: {text}\n"
+            "Write a concise TikTok narration script split into paragraphs. "
+            "Each paragraph should correspond to a separate topic"
+            "Create less 10 video based on the information given less is usually better. maybe based on the topics and the texts that are there"
+            "Do not make more than 10 videos. recommendation is 5-7 videos"
+            "video should be approximately a 30-second narration. "
+            "Return only the plain transcript text — no sound cues or extra commentary. "
+            "Use the text to clearly explain the topic with depth, not just surface-level facts, so the viewer learns something new. "
+            "Start with a strong hook, and finish with a smooth transition that connects naturally to the next subtopic. "
+            "The tone should be engaging and easy to follow, suited for TikTok. "
+            "Ensure each script paragraph feels slightly connected to the others for a seamless video series."
         )
 
         response = client.models.generate_content(
@@ -227,6 +236,7 @@ class TikTalkKafkaConsumer:
             
             for blob in blobs:
                 if any(blob.name.lower().endswith(ext) for ext in video_extensions):
+                    logger.info(f"Blob name : {blob.name}")
                     video_files.append(blob.name)
             
             if not video_files:
@@ -297,7 +307,7 @@ class TikTalkKafkaConsumer:
         generation_match_precondition=0
 
         # upload to storage bucket
-        blob.upload_from_filename(source_file_name, if_generation_match=generation_match_precondition)
+        logger.log(f"BLOB UPLOAD: {blob.upload_from_filename(source_file_name, if_generation_match=generation_match_precondition)}")
 
         print(
             f"File {source_file_name} uploaded to {destination_blob_name}."
@@ -583,7 +593,9 @@ class TikTalkKafkaConsumer:
             # If video is shorter than audio, loop it to match audio duration
             elif video_clip.duration < audio_duration:
                 loops_needed = int(audio_duration / video_clip.duration) + 1
-                video_clip = video_clip.loop(loops_needed).subclip(0, audio_duration)
+                logger.info("Looping video")
+                video_clip = video_clip.fx(loop, loops_needed).subclip(0, audio_duration)
+                logger.info("Done looping video")
             
             # Resize video to phone dimensions (9:16 aspect ratio)
             # Target resolution: 720x1280 (HD vertical) for good quality/size balance
@@ -613,7 +625,9 @@ class TikTalkKafkaConsumer:
                     elif background_music.duration < audio_duration:
                         # Loop background music to match script duration
                         loops_needed = int(audio_duration / background_music.duration) + 1
-                        background_music = background_music.loop(loops_needed).subclip(0, audio_duration)
+                        logger.info("Looping music")
+                        background_music = background_music.fx(audio_loop, loops_needed).subclip(0, audio_duration)
+                        logger.info("Done looping music")
                     
                     # Lower the volume of background music (30% of original)
                     background_music = background_music.volumex(0.3)
@@ -633,24 +647,30 @@ class TikTalkKafkaConsumer:
                 mixed_audio = audio_clip
             
             # Set the audio of the video clip to the mixed audio
+            logger.info("Setting audio to video clip")
             video_with_audio = video_clip.set_audio(mixed_audio)
+            logger.info("Audio set to video clip successfully")
             
             # Add caption overlay if script text is provided
             if script_text.strip():
                 try:
                     # Create caption overlay
+                    logger.info("Creating caption overlay...")
                     caption_overlay = self.create_caption_overlay(
                         script_text, 
                         audio_duration, 
                         target_width, 
                         target_height
                     )
+                    logger.info("Caption overlay created successfully")
                     
                     # Composite overlays
+                    logger.info("Compositing caption overlay onto video...")
                     if caption_overlay is not None:
                         final_video = CompositeVideoClip([video_with_audio, caption_overlay])
                     else:
                         final_video = video_with_audio
+                    logger.info("Caption overlay composited successfully")
                         
                 except Exception as e:
                     logger.error(f"Error adding caption overlay: {str(e)}, creating video without overlays")
@@ -671,9 +691,9 @@ class TikTalkKafkaConsumer:
                     verbose=False,
                     logger=None,
                     # Balanced quality and speed settings
-                    fps=24,  # Standard FPS for good quality
-                    preset='fast',  # Good balance of speed and quality
-                    ffmpeg_params=['-crf', '23', '-movflags', '+faststart', '-threads', '4']  # Better quality, reasonable speed
+                    fps=20,  # Standard FPS for good quality
+                    preset='ultrafast',  # Good balance of speed and quality
+                    ffmpeg_params=['-crf', '28', '-movflags', '+faststart', '-threads', '6']  # Better quality, reasonable speed
                 )
                 logger.info(f"Video file written successfully: {output_filename}")
             except Exception as e:
@@ -814,12 +834,12 @@ class TikTalkKafkaConsumer:
                         script_text = paragraphs[i-1] if i <= len(paragraphs) else ""
                         
                         # Create the video with timeout protection
-                        self.create_video_with_timeout(background_video_url, audio_file, video_file, script_text, timeout_seconds=120)
+                        #self.create_video_with_timeout(background_video_url, audio_file, video_file, script_text, timeout_seconds=560)
+                        self.create_video(background_video_url, audio_file, video_file, script_text)
                         
                         # Check if video file was created successfully
                         if os.path.exists(video_file):
                             logger.info(f"Video created successfully: {video_file}")
-                            print(f"Video created: {video_file}")
                         else:
                             logger.error(f"Video file was not created: {video_file}")
                             raise Exception(f"Video file creation failed: {video_file}")
@@ -875,6 +895,7 @@ class TikTalkKafkaConsumer:
             logger.info(f"Received message on {topic}: {message_data}")
 
             if topic == "pdf-processing":
+                print(type(message_data))
                 self.process_pdf_message(message_data)
             else:
                 logger.warning(f"Unknown topic: {topic}")

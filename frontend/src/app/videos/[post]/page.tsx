@@ -60,6 +60,7 @@ export default function VideosPage() {
       });
 
       console.log('API Response Status:', response.status);
+      console.log("Response: ", response.body);
       
       if (response.ok) {
         const data = await response.json();

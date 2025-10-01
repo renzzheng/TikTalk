@@ -90,6 +90,7 @@ def create_video():
 def get_video(video_id):
     """Get video by ID"""
     try:
+        print(f"Fetching video with ID: {video_id}")
         video = Video.get_by_id(video_id)
         current_firebase_uid = get_current_firebase_uid()
         

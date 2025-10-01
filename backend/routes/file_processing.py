@@ -61,6 +61,7 @@ def process_multiple_files():
                     return jsonify({
                         "error": f"Invalid GCS URL: {decoded_url}"
                     }), 400
+                console.log(parts)
                 bucket, key = parts
                 gcs_url = f"https://storage.googleapis.com/{bucket}/{key}"
             elif "storage.googleapis.com" in decoded_url:
