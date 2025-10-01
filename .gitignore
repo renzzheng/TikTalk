@@ -12,9 +12,9 @@ node_modules
 
 # testing
 /coverage
-/venv/*
+*/venv/
+**/venv/
 venv/
-kafka/venv/
 __pycache__/
 *.pyc
 .DS_Store
