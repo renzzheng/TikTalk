@@ -2,6 +2,9 @@
 [![Watch the video](https://img.youtube.com/vi/dBnWLA51F78/maxresdefault.jpg)](https://youtu.be/dBnWLA51F78)
 [![Watch the video](https://img.youtube.com/vi/fv7-nhWqslg/maxresdefault.jpg)](https://youtu.be/fv7-nhWqslg)
 
+## DEVPOST
+https://devpost.com/software/tiktalk-vjhm7r
+
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
 
