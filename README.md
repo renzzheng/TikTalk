@@ -18,7 +18,8 @@ TikTalk is a full-stack web application that generates tiktok-styled short-form 
 
 ## How we built it
 We used Firebase, Kafka, Docker, OpenAI Whisper, Google Gemini AI, Google Cloud, Google TTS, React, Next.js, Typescript, Flask, MoviePy.
-<img width="1436" height="852" alt="image" src="https://github.com/user-attachments/assets/ef2ae342-3432-45ef-977b-e112ea2eaa9d" />
+<img width="1088" height="589" alt="image" src="https://github.com/user-attachments/assets/c7e81b68-45be-41d2-8fad-865571445b25" />
+
 
 ## Challenges we ran into
 One of the biggest hurdles that we did not account for, was our group's ability to work together under pressure. It was an exercise for us in trying to figure out how to synergize with each other. 
