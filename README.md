@@ -26,7 +26,6 @@ We used Firebase, Kafka, Docker, OpenAI Whisper, Google Gemini AI, Google Cloud,
 One of the biggest hurdles that we did not account for, was our group's ability to work together under pressure. It was an exercise for us in trying to figure out how to synergize with each other. 
 During our development, each teammate explored new technologies to build our app, most of which were unfamiliar with us, and we attempted to incorporate a wide scope of dependencies within a short time frame. 
 Determined to explore uncharted territory, we heavily relied on reading over the documentation for each respective technologies that we incorporated.
-This setback for example, caused one simple issue during our enabling of Firebase, delaying our development process by several hours.
 
 ## Accomplishments that we're proud of
 The majority of our teammates have never taken on the task of full-stack development. Coming together for our first hackathon, we set out with an incredibly daunting task, but we are all incredibly thrilled to claim that we have met this goal.
