@@ -1,13 +1,13 @@
-## DEMO
-[![Watch the video](https://img.youtube.com/vi/dBnWLA51F78/maxresdefault.jpg)](https://youtu.be/dBnWLA51F78)
-[![Watch the video](https://img.youtube.com/vi/fv7-nhWqslg/maxresdefault.jpg)](https://youtu.be/fv7-nhWqslg)
-
 ## TikTalk
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
 
 <p align="center">
   <img width="206" height="206" alt="image" src="https://github.com/user-attachments/assets/18d48adc-e589-4c33-a01e-ce5ea862fa1b" />
 </p>
+
+## DEMO
+[![Watch the video](https://img.youtube.com/vi/dBnWLA51F78/maxresdefault.jpg)](https://youtu.be/dBnWLA51F78)
+[![Watch the video](https://img.youtube.com/vi/fv7-nhWqslg/maxresdefault.jpg)](https://youtu.be/fv7-nhWqslg)
 
 
 ## Inspiration
