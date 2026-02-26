@@ -6,88 +6,98 @@ import Image from "next/image";
 import { isUserLoggedIn, signUserOut } from "@/hooks/useFirebaseAuth";
 
 export function Navbar() {
-    const isLoggedIn = isUserLoggedIn();
-    return (
-        <nav className="w-full bg-gray-900 text-white shadow-md">
-            <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-                <Link href="/" className="flex items-center space-x-2">
-                    <Image
-                        src="/ttlogo.png" // place logo.svg or logo.png inside /public
-                        alt="App Logo"
-                        width={60}
-                        height={60}
-                        className="h-15 w-15 rounded-full"
-                        priority
-                    />
+  const isLoggedIn = isUserLoggedIn();
+
+  const linkStyle = {
+    display: "inline-block",
+    padding: "0.45rem 1rem",
+    borderRadius: "8px",
+    color: "rgba(255,255,255,0.6)",
+    textDecoration: "none",
+    fontSize: "0.9rem",
+    fontFamily: "'DM Sans', sans-serif",
+    transition: "color 0.2s",
+  };
+
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      background: "rgba(10,10,10,0.85)",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      borderBottom: "1px solid rgba(255,255,255,0.06)",
+    }}>
+      <div style={{ width: "100%", padding: "0.75rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+        {/* Logo — hugs left */}
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.6rem", textDecoration: "none" }}>
+          <Image src="/ttlogo.png" alt="TikTalk" width={38} height={38} style={{ borderRadius: "50%" }} priority />
+          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "1rem", color: "#fff" }}>TikTalk</span>
+        </Link>
+
+        {/* Nav links — hugs right */}
+        <NavigationMenu.Root>
+          <NavigationMenu.List style={{ display: "flex", alignItems: "center", gap: "0.25rem", listStyle: "none", margin: 0, padding: 0 }}>
+
+            <NavigationMenu.Item>
+              <NavigationMenu.Link asChild>
+                <Link href="/" style={linkStyle}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}>
+                  Home
                 </Link>
-                <NavigationMenu.Root>
-                    <NavigationMenu.List className="flex space-x-6">
+              </NavigationMenu.Link>
+            </NavigationMenu.Item>
 
-                        <NavigationMenu.Item>
-                            <NavigationMenu.Link asChild>
-                                <Link
-                                    href="/"
-                                    className="px-4 py-2 rounded-md hover:bg-gray-700 transition"
-                                >
-                                    Home
-                                </Link>
-                            </NavigationMenu.Link>
-                        </NavigationMenu.Item>
+            <NavigationMenu.Item>
+              <NavigationMenu.Link asChild>
+                <Link href="/create" style={linkStyle}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}>
+                  Upload
+                </Link>
+              </NavigationMenu.Link>
+            </NavigationMenu.Item>
 
-                        <NavigationMenu.Item>
-                            <NavigationMenu.Link asChild>
-                                <Link
-                                    href="/create"
-                                    className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
-                                >
-                                    Upload
-                                </Link>
-                            </NavigationMenu.Link>
-                        </NavigationMenu.Item>
+            {!isLoggedIn && (
+              <NavigationMenu.Item>
+                <NavigationMenu.Link asChild>
+                  <Link href="/login" style={linkStyle}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}>
+                    Log In
+                  </Link>
+                </NavigationMenu.Link>
+              </NavigationMenu.Item>
+            )}
 
-                        {!isLoggedIn && (
-                            <NavigationMenu.Item>
-                                <NavigationMenu.Link asChild>
-                                    <Link
-                                        href="/login"
-                                        className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
-                                    >
-                                        Log In
-                                    </Link>
-                                </NavigationMenu.Link>
-                            </NavigationMenu.Item>
-                        )}
+            {!isLoggedIn && (
+              <NavigationMenu.Item>
+                <NavigationMenu.Link asChild>
+                  <Link href="/signup" style={linkStyle}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}>
+                    Sign Up
+                  </Link>
+                </NavigationMenu.Link>
+              </NavigationMenu.Item>
+            )}
 
-                        {!isLoggedIn && (
-                        <NavigationMenu.Item>
-                            <NavigationMenu.Link asChild>
-                                <Link
-                                    href="/signup"
-                                    className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
-                                >
-                                    Sign Up
-                                </Link>
-                            </NavigationMenu.Link>
-                        </NavigationMenu.Item>
-                        )}
+            {isLoggedIn && (
+              <NavigationMenu.Item>
+                <NavigationMenu.Link asChild>
+                  <Link href="/login" onClick={signUserOut} style={linkStyle}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}>
+                    Sign Out
+                  </Link>
+                </NavigationMenu.Link>
+              </NavigationMenu.Item>
+            )}
 
-                        {isLoggedIn && (
-                            <NavigationMenu.Item>
-                                <NavigationMenu.Link asChild>
-                                    <Link
-                                        href="/login"
-                                        className="px-4 py-2 rounded-md hover:bg-indigo-600 bg-blue-500 transition"
-                                        onClick={signUserOut}
-                                    >
-                                        Sign Out
-                                    </Link>
-                                </NavigationMenu.Link>
-                            </NavigationMenu.Item>
-                        )}
-
-                    </NavigationMenu.List>
-                </NavigationMenu.Root>
-            </div>
-        </nav>
-    );
+          </NavigationMenu.List>
+        </NavigationMenu.Root>
+      </div>
+    </nav>
+  );
 }
