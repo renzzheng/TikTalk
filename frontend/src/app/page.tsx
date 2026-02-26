@@ -44,12 +44,12 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&family=Reenie+Beanie&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0f0f0f; }
+        body { background: #fafafa; }
 
         .hero-grain::after {
           content: '';
           position: absolute; inset: 0;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
           pointer-events: none; z-index: 1; border-radius: inherit;
         }
 
@@ -60,13 +60,13 @@ export default function Home() {
           color: #fff; border: none; border-radius: 50px;
           font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
           cursor: pointer; letter-spacing: 0.02em;
-          box-shadow: 0 0 40px rgba(254,44,85,0.4);
+          box-shadow: 0 4px 24px rgba(254,44,85,0.3);
           position: relative; z-index: 2;
           animation: jelly-idle 3s ease-in-out infinite;
           transition: box-shadow 0.2s ease;
         }
         .hero-btn:hover {
-          box-shadow: 0 0 70px rgba(254,44,85,0.65);
+          box-shadow: 0 8px 40px rgba(254,44,85,0.45);
         }
         .jelly-active {
           animation: jelly-squish 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
@@ -100,8 +100,7 @@ export default function Home() {
         .fade-up { animation: fadeUp 0.7s ease forwards; opacity: 0; }
       `}</style>
 
-      <main style={{ background: "#0f0f0f", color: "#fff", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", overflowX: "hidden" }}>
-
+        <main style={{ background: "linear-gradient(135deg, #fff5f5 0%, #fafafa 50%, #f0fffe 100%)", color: "#111", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", overflowX: "hidden" }}>
         {/* ──────────────── HERO ──────────────── */}
         <section style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "8rem 1.5rem 4rem" }} className="hero-grain">
 
@@ -109,15 +108,15 @@ export default function Home() {
           <h1 className="fade-up" style={{
             animationDelay: "0.15s",
             fontFamily: "'Reenie Beanie', cursive",
-            fontSize: "clamp(4.5rem, 12vw, 10rem)",
+            fontSize: "clamp(6rem, 8vw, 7rem)",
             lineHeight: 1.05,
             letterSpacing: "-0.03em",
             fontWeight: 800,
-            color: "#fff",
+            color: "#111",
           }}>
             Your Notes,<br />
             <span style={{
-              background: "linear-gradient(135deg, #fe2c55 0%, #ff6b35 50%, #25f4ee 100%)",
+              background: "linear-gradient(135deg, #fe2c55 0%, #ff6b35 35%, #25f4ee 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}>Now Addictive.</span>
@@ -126,8 +125,8 @@ export default function Home() {
           {/* Subheading */}
           <p className="fade-up" style={{
             animationDelay: "0.3s",
-            color: "#666",
-            fontSize: "clamp(1rem, 2vw, 1.15rem)",
+            color: "#777",
+            fontSize: "clamp(1rem, 2vw, 1.25rem)",
             lineHeight: 1.7,
             maxWidth: 480,
             margin: "1.5rem auto 2.5rem",
@@ -143,13 +142,18 @@ export default function Home() {
             </JellyButton>
           </div>
 
-          {/* Flow diagram */}
-          <div className="fade-up" style={{
-            animationDelay: "0.6s",
-            display: "flex", alignItems: "center", gap: "0.5rem",
-            marginTop: "4.5rem", flexWrap: "wrap", justifyContent: "center",
-            position: "relative", zIndex: 2,
-          }}>
+            {/* Flow diagram */}
+            <div className="fade-up" style={{
+              animationDelay: "0.6s",
+              display: "flex", alignItems: "center", gap: "0.5rem",
+              marginTop: "4.5rem", flexWrap: "wrap", justifyContent: "center",
+              position: "relative", zIndex: 2,
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.07)",
+              boxShadow: "0 2px 20px rgba(0,0,0,0.06)",
+              borderRadius: "24px",
+              padding: "1rem 2rem",
+            }}>
             {[
               { src: "/pdfimg.png", label: "PDF", color: "#fe2c55" },
               { src: "/mp4img.png", label: "MP4 / MP3", color: "#ff6b35" },
@@ -172,20 +176,20 @@ export default function Home() {
                   </linearGradient>
                 </defs>
               </svg>
-              <span style={{ fontSize: "0.6rem", color: "#444", letterSpacing: "0.1em", textTransform: "uppercase" }}>generates</span>
+              <span style={{ fontSize: "0.6rem", color: "#bbb", letterSpacing: "0.1em", textTransform: "uppercase" }}>generates</span>
             </div>
 
             {/* TikTalk */}
             <div className="flow-pill">
               <Image src="/ttlogo.png" alt="TikTalk" width={48} height={48} style={{ borderRadius: "50%" }} />
-              <span style={{ fontSize: "0.78rem", color: "#fe2c55", fontWeight: 700, letterSpacing: "0.08em" }}>TIKTALK</span>
+              <span style={{ fontSize: "0.78rem", color: "#0a9e99", fontWeight: 700, letterSpacing: "0.08em" }}>TIKTALK</span>
             </div>
           </div>
         </section>
 
         {/* ──────────────── FOOTER ──────────────── */}
-        <footer style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "2rem 1.5rem", display: "flex", justifyContent: "center", alignItems: "center" }}>
-          <span style={{ color: "#444", fontSize: "0.8rem" }}>© 2025 TikTalk</span>
+        <footer style={{ borderTop: "1px solid rgba(0,0,0,0.08)", padding: "2rem 1.5rem", display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <span style={{ color: "#aaa", fontSize: "0.8rem" }}>© 2025 TikTalk</span>
         </footer>
 
       </main>
