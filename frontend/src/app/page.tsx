@@ -119,7 +119,7 @@ export default function Home() {
               background: "linear-gradient(135deg, #fe2c55 0%, #ff6b35 35%, #25f4ee 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-            }}>Now Addictive.</span>
+            }}>Made Addictive.</span>
           </h1>
 
           {/* Subheading */}
