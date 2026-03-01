@@ -2,7 +2,7 @@
 Whether they're lecture notes or lecture videos, be ready to transform them into enticing and digestible short form content clips. Turn your TikTok addiction into study time with a simple upload!
 
 <p align="center">
-  <img width="206" height="206" alt="image" src="https://github.com/user-attachments/assets/18d48adc-e589-4c33-a01e-ce5ea862fa1b" />
+<img width="1512" height="945" alt="image" src="https://github.com/user-attachments/assets/9ec8c462-c635-4933-86c8-4ae20fae7083" />
 </p>
 
 ## DEMO
